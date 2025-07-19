@@ -1,6 +1,7 @@
 import { type RecordModel } from "pocketbase";
 
 export interface t_pb_User extends RecordModel {
+export interface t_pb_User extends RecordModel {
   avatar: string;
   collectionId: string;
   collectionName: string;

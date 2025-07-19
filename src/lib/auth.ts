@@ -32,6 +32,7 @@ export async function loginOAuth(provider: OAuthProvider) {
 
 async function storeServerCookie() {
   setPocketbaseCookie(pb.authStore.exportToCookie());
+  setPocketbaseCookie(pb.authStore.exportToCookie());
 }
 
 export function logout() {
