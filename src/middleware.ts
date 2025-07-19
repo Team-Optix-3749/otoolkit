@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { runPocketbase } from "./lib/pbaseServer";
-import { runPocketbase } from "./lib/pbaseServer";
 
 const adminOnlyRoutes = ["/admin", "/testing", "/outreach/manage-events"];
 const authedOnlyRoutes = [
@@ -28,7 +27,6 @@ export async function middleware(request: NextRequest) {
   });
 
   if (!record) {
-  if (!record) {
     nextUrl.pathname = "/auth/login";
     return NextResponse.redirect(nextUrl);
   }
@@ -45,8 +43,6 @@ export async function middleware(request: NextRequest) {
 
     return NextResponse.redirect(nextUrl);
   }
-
-  return NextResponse.next();
 
   return NextResponse.next();
 }
