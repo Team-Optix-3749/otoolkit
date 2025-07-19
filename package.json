@@ -30,7 +30,10 @@
     "sonner": "^2.0.5",
     "swr": "^2.3.3",
     "tailwind-merge": "^3.3.0",
-    "zustand": "^5.0.5"
+    "zustand": "^5.0.5",
+    "swr": "^2.3.3",
+    "tailwind-merge": "^3.3.0"
+
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
