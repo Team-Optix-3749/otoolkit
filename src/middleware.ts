@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { runPocketbase } from "./lib/pbaseServer";
+import { execPocketbase } from "./lib/pbaseServer";
 
 const adminOnlyRoutes = ["/admin", "/testing", "/outreach/manage-events"];
 const authedOnlyRoutes = [
@@ -8,7 +8,8 @@ const authedOnlyRoutes = [
   "/profile",
   "/settings",
   "/outreach",
-  "/build"
+  "/build",
+  "/scouting"
 ];
 // const publicPaths = ["/auth/unauthorized", "/auth/login", "/auth/signup"];
 
@@ -22,7 +23,7 @@ export async function middleware(request: NextRequest) {
   if (![...authedOnlyRoutes, ...adminOnlyRoutes].includes(nextUrl.pathname))
     return NextResponse.next();
 
-  const record = await runPocketbase((pb) => {
+  const record = await execPocketbase((pb) => {
     return pb.authStore.record;
   });
 
