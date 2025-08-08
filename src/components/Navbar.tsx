@@ -11,7 +11,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavbar } from "@/hooks/useNavbar";
 import { recordToImageUrl } from "@/lib/pbaseClient";
 import { logout } from "@/lib/auth";
-import type { pb_UserColItem } from "@/lib/types";
+import type { pb_UsersColItem } from "@/lib/types";
 
 import {
   User,
@@ -37,7 +37,7 @@ import {
 import NavbarSkeleton from "./skeletons/NavbarSkeleton";
 import { Separator } from "@/components/ui/separator";
 
-const allItems = [
+const NAV_ITEMS = [
   {
     onlyHomePersist: true,
     icon: <User className="h-5 w-5" />,
@@ -76,11 +76,21 @@ const allItems = [
   // }
 ];
 
-export type NavItems = typeof allItems;
+const PROFILE_ITEM = {
+  url: "/user/profile",
+  msg: "Going to Profile"
+};
+
+const LOGIN_ITEM = {
+  url: "/auth/login",
+  msg: "Going to Login"
+};
+
+export type NavItems = typeof NAV_ITEMS;
 
 type ChildProps = {
-  user: pb_UserColItem | null;
-  navItems: typeof allItems;
+  user: pb_UsersColItem | null;
+  navItems: typeof NAV_ITEMS;
   onNavigate: (url: { url: string; msg?: string }) => void;
   defaultToShown: boolean;
 };
@@ -97,8 +107,8 @@ export default function Navbar({}) {
   if (!isHydrated) return null; //<NavbarSkeleton navItems={allItems} />;
 
   const navItems = state.renderOnlyHome
-    ? allItems.filter((item) => item.onlyHomePersist)
-    : allItems;
+    ? NAV_ITEMS.filter((item) => item.onlyHomePersist)
+    : NAV_ITEMS;
 
   const onNavigate = function ({
     url,
@@ -207,12 +217,7 @@ function Mobile({ navItems, user, onNavigate }: ChildProps) {
               <Button
                 variant="ghost"
                 className="w-full justify-start text-left h-12 text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                onClick={() =>
-                  handleNavigation({
-                    url: "/account",
-                    msg: "Going to Account"
-                  })
-                }>
+                onClick={() => handleNavigation(PROFILE_ITEM)}>
                 <div className="flex items-center space-x-3">
                   <User className="h-5 w-5" />
                   <span className="text-sm font-medium">Account</span>
@@ -222,12 +227,7 @@ function Mobile({ navItems, user, onNavigate }: ChildProps) {
               <Button
                 variant="default"
                 className="w-full justify-start text-left h-12"
-                onClick={() =>
-                  handleNavigation({
-                    url: "/auth/login",
-                    msg: "Going to Login"
-                  })
-                }>
+                onClick={() => handleNavigation(LOGIN_ITEM)}>
                 <div className="flex items-center space-x-3">
                   <User className="h-5 w-5" />
                   <span className="text-sm font-medium">Log In</span>
@@ -325,7 +325,7 @@ function Desktop({ navItems, user, onNavigate, defaultToShown }: ChildProps) {
             {user ? (
               <div className="flex items-center space-x-3 pl-6 ml-2 border-l border-border">
                 <Link
-                  href="/profile"
+                  href={PROFILE_ITEM.url}
                   className="flex items-center space-x-3 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100 group">
                   <div className="hidden flex-col items-start md:flex">
                     <span className="text-sm font-medium text-foreground underline transition-all duration-200 ease-in-out decoration-transparent group-hover:decoration-current">
@@ -355,10 +355,7 @@ function Desktop({ navItems, user, onNavigate, defaultToShown }: ChildProps) {
                   variant="default"
                   size="sm"
                   className="flex items-center space-x-3"
-                  onClick={onNavigate.bind(null, {
-                    url: "/auth/login",
-                    msg: "Going to Login"
-                  })}>
+                  onClick={onNavigate.bind(null, LOGIN_ITEM)}>
                   <User className="h-4 w-4" />
                   <span className="text-sm font-medium">Log In</span>
                 </Button>

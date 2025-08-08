@@ -1,6 +1,6 @@
 import { type RecordModel } from "pocketbase";
 
-export interface pb_UserColItem extends RecordModel {
+export interface pb_UsersColItem extends RecordModel {
   avatar: string;
   collectionId: string;
   collectionName: string;
@@ -23,7 +23,7 @@ export interface pb_UserDataItem extends RecordModel {
   lastOutreachEvent: string;
   lastBuildEvent: string;
   expand?: {
-    user: pb_UserColItem;
+    user: pb_UsersColItem;
   };
 }
 
@@ -41,7 +41,7 @@ export interface pb_OutreachSessionsItem extends RecordModel {
   minutes: number;
   created: string;
   expand?: {
-    user: pb_UserColItem;
+    user: pb_UsersColItem;
     event: pb_OutreachEventsItem;
   };
 }

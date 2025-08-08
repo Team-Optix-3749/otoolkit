@@ -3,7 +3,7 @@ import { ClientResponseError } from "pocketbase";
 import { pb } from "@/lib/pbaseClient";
 import { PB_Codes } from "@/lib/states";
 import { Dispatch, SetStateAction } from "react";
-import { pb_UserColItem } from "../types";
+import { pb_UsersColItem } from "../types";
 import { getPocketbaseCookie, setPocketbaseCookie } from "../pbaseServer";
 
 type StateTuple = [null, string] | [ClientResponseError, null];
@@ -52,10 +52,10 @@ export async function create_User(
 }
 
 export function registerAuthCallback(
-  setUser: Dispatch<SetStateAction<pb_UserColItem | null>>
+  setUser: Dispatch<SetStateAction<pb_UsersColItem | null>>
 ) {
   return pb.authStore.onChange(async (token, record) => {
-    setUser(record as pb_UserColItem);
+    setUser(record as pb_UsersColItem);
     setPocketbaseCookie(pb.authStore.exportToCookie());
   }, true);
 }
