@@ -4,9 +4,9 @@ import { pb, recordToImageUrl } from "@/lib/pbaseClient";
 import { formatMinutes } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type {
-  pb_OutreachEventsColItem,
-  pb_OutreachSessionsColItem
-} from "@/lib/types";
+  pbCol_OutreachEvents,
+  pbCol_OutreachSessions
+} from "@/lib/types/pbTypes";
 import { Clock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,8 +22,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface EventSessionsTableProps {
-  event: pb_OutreachEventsColItem;
-  sessions: pb_OutreachSessionsColItem[];
+  event: pbCol_OutreachEvents;
+  sessions: pbCol_OutreachSessions[];
   onSessionDeleted: () => void;
 }
 

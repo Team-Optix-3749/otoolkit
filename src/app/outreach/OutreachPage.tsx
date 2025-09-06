@@ -8,7 +8,7 @@ import { pb, recordToImageUrl } from "@/lib/pbaseClient";
 import { useNavbar } from "@/hooks/useNavbar";
 import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { pb_UserDataColItem, pb_UsersColItem } from "@/lib/types";
+import type { pbCol_UserData, pbCol_Users } from "@/lib/types/pbTypes";
 
 import { formatMinutes, getBadgeStatusStyles } from "@/lib/utils";
 
@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 const PAGE_SIZE = 15;
 
 interface PaginatedResponse {
-  items: pb_UserDataColItem[];
+  items: pbCol_UserData[];
   page: number;
   perPage: number;
   totalItems: number;
@@ -38,8 +38,8 @@ interface PaginatedResponse {
 
 type Props = {
   isAdmin?: boolean;
-  userData?: pb_UserDataColItem;
-  user: pb_UsersColItem;
+  userData?: pbCol_UserData;
+  user: pbCol_Users;
   outreachMinutesCutoff: number;
 };
 
@@ -49,7 +49,7 @@ const fetcher = async (url: string): Promise<PaginatedResponse> => {
 
   const response = await pb
     .collection("UserData")
-    .getList<pb_UserDataColItem>(pageNum, PAGE_SIZE, {
+    .getList<pbCol_UserData>(pageNum, PAGE_SIZE, {
       expand: "user"
     });
 

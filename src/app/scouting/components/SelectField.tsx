@@ -1,56 +1,94 @@
-import { SelectQuestionConfig, TeamOption } from "../types";
-import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
-import { pb } from "@/lib/pbaseClient";
-import { toast } from "sonner";
+import { useFormContext, Controller } from "react-hook-form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import { BaseField } from "./BaseField";
+import { SelectQuestionConfig, SelectOption } from "@/lib/types/scoutingTypes";
+import { fetchSelectOptions } from "@/lib/db/scouting";
 
 interface SelectFieldProps {
   question: SelectQuestionConfig;
-  register: any;
-  errors: any;
 }
 
-export function SelectField({ question, register, errors }: SelectFieldProps) {
-  const [options, setOptions] = useState<TeamOption[]>([]);
-  const isRequired = !question.optional;
+export function SelectField({ question }: SelectFieldProps) {
+  const {
+    control,
+    formState: { errors }
+  } = useFormContext();
+  const [options, setOptions] = useState<SelectOption[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const error = errors[question.name]?.message as string | undefined;
 
   useEffect(() => {
-    const fetchOptions = async () => {
+    const loadOptions = async () => {
+      setIsLoading(true);
       try {
-        const record = await pb
-          .collection("Settings")
-          .getFirstListItem(`key='${question.select_key}'`);
-        if (record && record.value) {
-          setOptions(record.value);
-        }
+        const teamOptions = await fetchSelectOptions(question.select_key);
+        setOptions(teamOptions);
       } catch (error) {
-        console.error(`Failed to fetch options for ${question.name}:`, error);
-        toast.error(`Failed to load options for ${question.name}`);
+        console.error("Failed to load select options:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    fetchOptions();
-  }, [question]);
+
+    loadOptions();
+  }, []);
 
   return (
-    <div className="grid gap-2">
-      <Label htmlFor={question.name}>
-        {question.name}
-        {!question.optional && <span className="text-destructive ml-1">*</span>}
-      </Label>
-      <select
-        id={question.name}
-        className="bg-input border-border text-foreground rounded-md p-2"
-        {...register(question.name, { required: isRequired })}>
-        <option value="">Select {question.name}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {errors[question.name] && (
-        <p className="text-sm text-destructive">This field is required</p>
-      )}
-    </div>
+    <BaseField
+      label={question.name}
+      required={!question.optional}
+      description={question.description}
+      error={error}>
+      <Controller
+        name={question.name}
+        control={control}
+        render={({ field }) => (
+          <Select
+            value={field.value || ""}
+            onValueChange={field.onChange}
+            disabled={isLoading}>
+            <SelectTrigger className="w-full">
+              <SelectValue
+                placeholder={
+                  isLoading ? "Loading options..." : `Select ${question.name}`
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {options.length > 0 &&
+                options.map(
+                  (option) =>
+                    option.value && (
+                      <SelectItem
+                        key={option.value}
+                        value={JSON.stringify(option)}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{option.value}</span>
+                          <span className="text-muted-foreground">
+                            {option.name.length > 30
+                              ? `${option.name.slice(0, 30)}...`
+                              : option.name}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    )
+                )}
+              {options.length === 0 && !isLoading && (
+                <SelectItem value="" disabled>
+                  No options available
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        )}
+      />
+    </BaseField>
   );
 }

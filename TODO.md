@@ -1,7 +1,12 @@
 # Features
 - Pages
 - - Reset Password
-- - Builds whole shennanigans
+- - Builds Hours Page
+- - Account Page
+- - Scouting Page
+- - - Autosave
+- - - No wifi stuff
+- - - caching
 
 # TESTING
 - Outreach
@@ -12,6 +17,6 @@
 - Avatar Randomized Gradient (account linked?) <- Make with picture upload
 
 # Misc
-- Make Outreach Graph Bi-Weekly
+- Make Outreach Graph into bar graph
 
 # Bugs

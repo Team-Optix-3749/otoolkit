@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 
 import { registerAuthCallback } from "@/lib/db/user";
-import type { pb_UsersColItem } from "@/lib/types";
+import type { pbCol_Users } from "@/lib/types/pbTypes";
 
 export function useUser() {
-  const [user, setUser] = useState<pb_UsersColItem | null>(null);
+  const [user, setUser] = useState<pbCol_Users | null>(null);
 
   useEffect(() => {
     return registerAuthCallback(setUser);

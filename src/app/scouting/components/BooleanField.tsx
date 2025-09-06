@@ -1,35 +1,39 @@
-import { BooleanQuestionConfig } from "../types";
-import { Label } from "@/components/ui/label";
+import { useFormContext, Controller } from "react-hook-form";
 import { Switch } from "@/components/ui/switch";
-import { useEffect } from "react";
+import { BaseField } from "./BaseField";
+import { BooleanQuestionConfig } from "@/lib/types/scoutingTypes";
 
 interface BooleanFieldProps {
   question: BooleanQuestionConfig;
-  register: any;
-  setValue: any;
 }
 
-export function BooleanField({
-  question,
-  register,
-  setValue
-}: BooleanFieldProps) {
-  useEffect(() => {
-    setValue(question.name, question.boolean_default);
-  }, [question, setValue]);
+export function BooleanField({ question }: BooleanFieldProps) {
+  const {
+    control,
+    formState: { errors }
+  } = useFormContext();
+  const error = errors[question.name]?.message as string | undefined;
 
   return (
-    <div className="flex items-center justify-between">
-      <Label htmlFor={question.name}>
-        {question.name}
-        {!question.optional && <span className="text-destructive ml-1">*</span>}
-      </Label>
-      <Switch
-        id={question.name}
-        defaultChecked={question.boolean_default}
-        onCheckedChange={(checked) => setValue(question.name, checked)}
-        {...register(question.name)}
+    <BaseField
+      label={question.name}
+      required={!question.optional}
+      description={question.description}
+      error={error}>
+      <Controller
+        name={question.name}
+        control={control}
+        defaultValue={question.default}
+        render={({ field }) => (
+          <div className="flex items-center justify-between">
+            <Switch
+              checked={field.value ?? question.default}
+              onCheckedChange={field.onChange}
+              className="data-[state=checked]:bg-primary"
+            />
+          </div>
+        )}
       />
-    </div>
+    </BaseField>
   );
 }

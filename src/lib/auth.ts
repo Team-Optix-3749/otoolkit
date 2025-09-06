@@ -2,7 +2,7 @@ import { pb } from "./pbaseClient";
 import { BaseStates } from "./states";
 import { setPocketbaseCookie } from "./pbaseServer";
 
-import { OAuthProvider } from "./types";
+import { pb_OAuthProvider } from "./types/pbTypes";
 import { SimpleLoginStates, SignupStates } from "./states";
 import { newUser } from "./db/user";
 
@@ -54,7 +54,7 @@ export async function loginEmailPass(
   }
 }
 
-export async function loginOAuth(provider: OAuthProvider) {
+export async function loginOAuth(provider: pb_OAuthProvider) {
   const authData = await pb.collection("users").authWithOAuth2({
     provider,
     createData: {

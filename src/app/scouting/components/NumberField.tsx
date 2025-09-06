@@ -1,41 +1,48 @@
-import { NumberQuestionConfig } from "../types";
-import { Label } from "@/components/ui/label";
+import { useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/input";
+import { BaseField } from "./BaseField";
+import { NumberQuestionConfig } from "@/lib/types/scoutingTypes";
 
 interface NumberFieldProps {
   question: NumberQuestionConfig;
-  register: any;
-  errors: any;
 }
 
-export function NumberField({ question, register, errors }: NumberFieldProps) {
-  const isRequired = !question.optional;
+export function NumberField({ question }: NumberFieldProps) {
+  const {
+    register,
+    formState: { errors }
+  } = useFormContext();
+  const error = errors[question.name]?.message as string | undefined;
 
   return (
-    <div className="grid gap-2">
-      <Label htmlFor={question.name}>
-        {question.name}
-        {!question.optional && <span className="text-destructive ml-1">*</span>}
-      </Label>
-      <Input
-        id={question.name}
-        type="number"
-        min={question.number_min}
-        max={question.number_max}
-        className="bg-input border-border text-foreground"
-        {...register(question.name, {
-          required: isRequired,
-          min: question.number_min,
-          max: question.number_max,
-          valueAsNumber: true
-        })}
-      />
-      {errors[question.name] && (
-        <p className="text-sm text-destructive">
-          Please enter a number between {question.number_min} and{" "}
-          {question.number_max}
-        </p>
-      )}
-    </div>
+    <BaseField
+      label={question.name}
+      required={!question.optional}
+      description={
+        question.description ||
+        `Enter a number between ${question.min} and ${question.max}${
+          question.unit ? ` (${question.unit})` : ""
+        }`
+      }
+      error={error}>
+      <div className="relative">
+        <Input
+          type="number"
+          min={question.min}
+          max={question.max}
+          step={1}
+          className="pr-12"
+          placeholder={`${question.min}-${question.max}`}
+          {...register(question.name, {
+            valueAsNumber: true
+          })}
+        />
+        {question.unit && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+            {question.unit}
+          </div>
+        )}
+      </div>
+    </BaseField>
   );
 }

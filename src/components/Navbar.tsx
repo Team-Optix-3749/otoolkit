@@ -11,7 +11,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavbar } from "@/hooks/useNavbar";
 import { recordToImageUrl } from "@/lib/pbaseClient";
 import { logout } from "@/lib/auth";
-import type { pb_UsersColItem } from "@/lib/types";
+import type { pbCol_Users } from "@/lib/types/pbTypes";
 
 import {
   User,
@@ -93,11 +93,10 @@ const LOGIN_ITEM = {
 export type NavItems = typeof NAV_ITEMS;
 
 type ChildProps = {
-  user: pb_UsersColItem | null;
+  user: pbCol_Users | null;
   navItems: typeof NAV_ITEMS;
   onNavigate: (url: { url: string; msg?: string }) => void;
-  defaultToShown: boolean;
-};
+} & ReturnType<typeof useNavbar>;
 
 export default function Navbar({}) {
   const router = useRouter();
@@ -138,7 +137,7 @@ export default function Navbar({}) {
   );
 }
 
-function Mobile({ navItems, user, onNavigate }: ChildProps) {
+function Mobile({ navItems, user, mobileNavbarSide, onNavigate }: ChildProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleNavigation = (item: {
@@ -156,7 +155,7 @@ function Mobile({ navItems, user, onNavigate }: ChildProps) {
         <Button
           variant="outline"
           size="icon"
-          className="fixed top-4 left-4 z-50 h-10 w-10 rounded-lg shadow-lg bg-card/95 backdrop-blur-xl border border-border hover:bg-muted">
+          className={`fixed top-4 ${mobileNavbarSide}-4 z-50 h-10 w-10 rounded-lg shadow-lg bg-card/95 backdrop-blur-xl border border-border hover:bg-muted`}>
           <Menu className="h-5 w-5" />
           <span className="sr-only">Open menu</span>
         </Button>

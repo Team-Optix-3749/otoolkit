@@ -1,6 +1,6 @@
 import { type RecordModel } from "pocketbase";
 
-export interface pb_UsersColItem extends RecordModel {
+export interface pbCol_Users extends RecordModel {
   avatar: string;
   collectionId: string;
   collectionName: string;
@@ -14,7 +14,7 @@ export interface pb_UsersColItem extends RecordModel {
   role: "member" | "admin" | "guest";
 }
 
-export interface pb_UserDataColItem extends RecordModel {
+export interface pbCol_UserData extends RecordModel {
   created: string;
   updated: string;
   user: string;
@@ -23,11 +23,11 @@ export interface pb_UserDataColItem extends RecordModel {
   lastOutreachEvent: string;
   lastBuildEvent: string;
   expand?: {
-    user: pb_UsersColItem;
+    user: pbCol_Users;
   };
 }
 
-export interface pb_OutreachEventsColItem extends RecordModel {
+export interface pbCol_OutreachEvents extends RecordModel {
   id: string;
   name: string;
   created: string;
@@ -35,18 +35,18 @@ export interface pb_OutreachEventsColItem extends RecordModel {
   date: string;
 }
 
-export interface pb_OutreachSessionsColItem extends RecordModel {
+export interface pbCol_OutreachSessions extends RecordModel {
   id: string;
   user: string;
   minutes: number;
   created: string;
   expand?: {
-    user: pb_UsersColItem;
-    event: pb_OutreachEventsColItem;
+    user: pbCol_Users;
+    event: pbCol_OutreachEvents;
   };
 }
 
-export interface pb_SettingsItem extends RecordModel {
+export interface pbCol_Settings extends RecordModel {
   id: string;
   key: string;
   value: JSON;
@@ -54,4 +54,4 @@ export interface pb_SettingsItem extends RecordModel {
   updated: string;
 }
 
-export type OAuthProvider = "google" | "discord";
+export type pb_OAuthProvider = "google" | "discord";
