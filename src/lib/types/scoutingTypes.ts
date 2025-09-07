@@ -70,6 +70,7 @@ export interface ScoutingSubmission {
 }
 
 export interface DexieScoutingSubmission {
+  id: number;
   user: string;
   data: string;
   date: Date;

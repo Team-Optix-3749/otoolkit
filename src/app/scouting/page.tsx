@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import { ScoutingQuestionConfig } from "@/lib/types/scoutingTypes";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default async function ScoutingPage() {
   // const { scoutingConfig, userId } = {
@@ -92,9 +93,11 @@ export default async function ScoutingPage() {
 function NavButtons({ className }: { className: string }) {
   return (
     <div {...{ className }}>
-      <Button variant={"outline"} className="flex-1">
-        Responses
-      </Button>
+      <Link href="/scouting/responses" className="flex-1">
+        <Button variant={"outline"} className="w-full">
+          Responses
+        </Button>
+      </Link>
       {false && (
         <Button variant={"outline"} className="flex-1">
           Configure
