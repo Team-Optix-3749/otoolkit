@@ -2,10 +2,9 @@
 
 // React
 import { useEffect, useState } from "react";
-// Types / Utils
-import type { t_pb_UserData } from "@/lib/types";
-import { formatMinutes, formatPbDate, getBadgeStatusStyles } from "@/lib/utils";
 import { recordToImageUrl } from "@/lib/pbaseClient";
+import type { UserData } from "@/lib/types/pocketbase";
+import { formatMinutes, formatPbDate, getBadgeStatusStyles } from "@/lib/utils";
 // UI
 import {
   Table,
@@ -15,15 +14,15 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-// Local Components
 import EditUserDialog from "./EditUserDialog";
 
 type OutreachTableProps = {
-  allUsers: t_pb_UserData[];
+  allUsers: UserData[];
   isAdmin: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
@@ -79,7 +78,7 @@ export function OutreachTable({
   });
 
   useEffect(() => {
-    const sortUsers = (users: t_pb_UserData[], config: typeof sortConfig) => {
+    const sortUsers = (users: UserData[], config: typeof sortConfig) => {
       return [...users].sort((a, b) => {
         let aValue, bValue;
 

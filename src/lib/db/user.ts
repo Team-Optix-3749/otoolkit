@@ -1,10 +1,10 @@
-import { ClientResponseError } from "pocketbase";
-
-import { pb } from "@/lib/pbaseClient";
-import { PB_Codes } from "@/lib/states";
 import { Dispatch, SetStateAction } from "react";
-import { t_pb_User, type t_pb_UserData } from "../types";
+import { ClientResponseError } from "pocketbase";
+import { pb } from "@/lib/pbaseClient";
+import type { User, UserData } from "@/lib/types/pocketbase";
+import { PB_Codes } from "@/lib/states";
 import { setPocketbaseCookie } from "../pbaseServer";
+
 
 export async function newUser(email: string, password: string, name: string) {
   try {
@@ -49,22 +49,22 @@ export async function createUser(
 }
 
 export function registerAuthCallback(
-  setUser: Dispatch<SetStateAction<t_pb_User | null>>
+  setUser: Dispatch<SetStateAction<User | null>>
 ) {
   return pb.authStore.onChange(async (token, record) => {
-    setUser(record as t_pb_User);
+    setUser(record as User);
     setPocketbaseCookie(pb.authStore.exportToCookie());
   }, true);
 }
 export async function listUserData(page: number, perPage: number) {
-  return await pb.collection("UserData").getList<t_pb_UserData>(page, perPage, {
+  return await pb.collection("UserData").getList<UserData>(page, perPage, {
     expand: "user"
   });
 }
 
 export async function listAllUsers() {
-  const users = await pb.collection("users").getFullList<t_pb_User>({
+  const users = await pb.collection("users").getFullList<User>({
     sort: "name"
   });
-  return users.toSorted((a, b) => a.name.localeCompare(b.name));
+return users;
 }

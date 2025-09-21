@@ -1,22 +1,20 @@
 "use client";
 
-// React
 import { useEffect, useState, useCallback } from "react";
 import useSWR from "swr";
-// Data helpers
+
 import { fetchEvents, fetchSessionsForEvent } from "@/lib/db/outreach";
-// Hooks
+
 import { useNavbar } from "@/hooks/useNavbar";
 import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { useIsMobile } from "@/hooks/use-mobile";
-// Types
-import type { t_pb_OutreachEvent, t_pb_OutreachSession } from "@/lib/types";
-// UI / Components
+import type { OutreachEvent, OutreachSession } from "@/lib/types/pocketbase";
+
 import Loader from "@/components/Loader";
 import CreateEventDialog from "./CreateEventDialog";
 import EventsList from "./EventsList";
 import EventDetails from "./EventDetails";
-// Icons
+
 import { Calendar } from "lucide-react";
 
 export default function ManageEventsPage() {
@@ -24,7 +22,7 @@ export default function ManageEventsPage() {
   const isHydrated = useIsHydrated();
   const isMobile = useIsMobile();
 
-  const [selectedEvent, setSelectedEvent] = useState<t_pb_OutreachEvent | null>(
+  const [selectedEvent, setSelectedEvent] = useState<OutreachEvent | null>(
     null
   );
 
@@ -52,10 +50,10 @@ export default function ManageEventsPage() {
     mutateEvents();
     if (selectedEvent) setSelectedEvent(null);
   }, [mutateEvents, selectedEvent]);
-  const handleEventSelect = useCallback(
-    (event: t_pb_OutreachEvent) => setSelectedEvent(event),
-    []
-  );
+
+  const handleEventSelect = useCallback((event: OutreachEvent) => {
+    setSelectedEvent(event);
+  }, []);
 
   useEffect(() => {
     setDefaultShown(false);

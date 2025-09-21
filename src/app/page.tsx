@@ -11,48 +11,50 @@ export const metadata: Metadata = {
     "Outreach tracking, scouting, and team operations for FRC Team Optix 3749."
 };
 
-export default function Home() {
-  const features = [
-    {
-      title: "Track Outreach Hours",
-      body: "Log events, record minutes, and see totals update right away."
-    },
-    {
-      title: "Run Scouting",
-      body: "Collect match and pit data fast on phones. Share findings quickly."
-    },
-    {
-      title: "See Progress",
-      body: "Simple charts show outreach impact and robot performance trends."
-    },
-    {
-      title: "Manage Sessions",
-      body: "Approve, adjust, and audit participation with clear histories."
-    },
-    {
-      title: "Built for Speed",
-      body: "Fast UI, instant feedback, dark mode first, mobile friendly."
-    },
-    {
-      title: "Role Aware",
-      body: "Admins manage settings. Members focus on tasks. Guests see basics."
-    }
-  ];
 
-  const valuePoints = [
-    {
-      h: "Faster Decisions",
-      p: "Scouting data turns into insights you can act on between matches."
-    },
-    {
-      h: "Less Spreadsheet Chaos",
-      p: "Central place for outreach + scouting. No more scattered tabs."
-    },
-    {
-      h: "Student Owned",
-      p: "Built by the team. Easy to extend for new seasons."
-    }
-  ];
+const features = [
+  {
+    title: "Track Outreach Hours",
+    body: "Log events, record minutes, and see totals update right away."
+  },
+  {
+    title: "Run Scouting",
+    body: "Collect match and pit data fast on phones. Share findings quickly."
+  },
+  {
+    title: "See Progress",
+    body: "Simple charts show outreach impact and robot performance trends."
+  },
+  {
+    title: "Manage Sessions",
+    body: "Approve, adjust, and audit participation with clear histories."
+  },
+  {
+    title: "Built for Speed",
+    body: "Fast UI, instant feedback, dark mode first, mobile friendly."
+  },
+  {
+    title: "Role Aware",
+    body: "Admins manage settings. Members focus on tasks. Guests see basics."
+  }
+];
+
+const valuePoints = [
+  {
+    h: "Faster Decisions",
+    p: "Scouting data turns into insights you can act on between matches."
+  },
+  {
+    h: "Less Spreadsheet Chaos",
+    p: "Central place for outreach + scouting. No more scattered tabs."
+  },
+  {
+    h: "Student Owned",
+    p: "Built by the team. Easy to extend for new seasons."
+  }
+];
+
+export default function Home() {
 
   return (
     <main className="space-y-32 pb-40">

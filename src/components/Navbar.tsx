@@ -11,9 +11,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavbar } from "@/hooks/useNavbar";
 import { recordToImageUrl } from "@/lib/pbaseClient";
 import { logout } from "@/lib/auth";
-import type { t_pb_User } from "@/lib/types";
 
-import { User, Clock, Menu, SearchCode, LogOut } from "lucide-react";
+
+import { User as UserIcon, Clock, Menu, SearchCode, LogOut } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,8 +26,10 @@ import {
   DrawerTitle,
   DrawerTrigger
 } from "@/components/ui/drawer";
+
 import NavbarSkeleton from "./skeletons/NavbarSkeleton";
 import { Separator } from "@/components/ui/separator";
+import { User } from "@/lib/types/pocketbase";
 
 const PROFILE_ITEM = {
   url: "/user/profile",
@@ -46,7 +48,7 @@ const LOGIN_ITEM = {
 const NAV_ITEMS = [
   {
     onlyHomePersist: true,
-    icon: <User className="h-5 w-5" />,
+    icon: <UserIcon className="h-5 w-5" />,
     label: "Home",
     url: "/",
     msg: ""
@@ -60,6 +62,12 @@ const NAV_ITEMS = [
       toast.warning("Under Construction");
       return false;
     }
+  },
+  {
+    icon: <SearchCode className="h-5 w-5" />,
+    label: "Scouting",
+    url: "/scouting",
+    msg: "Lets go scout!"
   },
   {
     icon: <Clock className="h-5 w-5" />,
@@ -92,11 +100,10 @@ const USER_ITEMS = [
 export type NavItems = typeof NAV_ITEMS;
 
 type ChildProps = {
-  user: t_pb_User | null;
+  user: User | null;
   navItems: typeof NAV_ITEMS;
   onNavigate: (url: { url: string; msg?: string }) => void;
-  defaultToShown: boolean;
-};
+} & ReturnType<typeof useNavbar>;
 
 export default function Navbar({}) {
   const router = useRouter();
@@ -137,7 +144,7 @@ export default function Navbar({}) {
   );
 }
 
-function Mobile({ navItems, user, onNavigate }: ChildProps) {
+function Mobile({ navItems, user, mobileNavbarSide, onNavigate }: ChildProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleNavigation = (item: {
@@ -155,7 +162,7 @@ function Mobile({ navItems, user, onNavigate }: ChildProps) {
         <Button
           variant="outline"
           size="icon"
-          className="fixed top-4 right-4 z-50 h-10 w-10 rounded-lg shadow-lg bg-card/95 backdrop-blur-xl border border-border hover:bg-muted">
+          className={`fixed top-4 ${mobileNavbarSide}-4 z-50 h-10 w-10 rounded-lg shadow-lg bg-card/95 backdrop-blur-xl border border-border hover:bg-muted`}>
           <Menu className="h-5 w-5" />
           <span className="sr-only">Open menu</span>
         </Button>
@@ -177,8 +184,19 @@ function Mobile({ navItems, user, onNavigate }: ChildProps) {
                 />
                 <AvatarFallback className="bg-muted text-muted-foreground text-base rounded-full flex items-center justify-center h-full w-full">
                   {(user.name || "U").charAt(0)}
+
                 </AvatarFallback>
               </Avatar>
+              <div className="flex flex-col">
+                <span className="text-base font-medium text-foreground">
+                  {user.name || "Unknown User"}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {user.role
+                    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+                    : "? Role ?"}
+                </span>
+              </div>
               <div className="flex flex-col">
                 <span className="text-base font-medium text-foreground">
                   {user.name || "Unknown User"}
@@ -242,7 +260,7 @@ function Mobile({ navItems, user, onNavigate }: ChildProps) {
                 className="w-full justify-start text-left h-12 text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 onClick={() => handleNavigation(PROFILE_ITEM)}>
                 <div className="flex items-center space-x-3">
-                  <User className="h-5 w-5" />
+                  <UserIcon className="h-5 w-5" />
                   <span className="text-sm font-medium">Account</span>
                 </div>
               </Button>
@@ -252,7 +270,7 @@ function Mobile({ navItems, user, onNavigate }: ChildProps) {
                 className="w-full justify-start text-left h-12"
                 onClick={() => handleNavigation(LOGIN_ITEM)}>
                 <div className="flex items-center space-x-3">
-                  <User className="h-5 w-5" />
+                  <UserIcon className="h-5 w-5" />
                   <span className="text-sm font-medium">Log In</span>
                 </div>
               </Button>
@@ -401,7 +419,7 @@ function Desktop({ navItems, user, onNavigate, defaultToShown }: ChildProps) {
                   size="sm"
                   className="flex items-center space-x-3"
                   onClick={onNavigate.bind(null, LOGIN_ITEM)}>
-                  <User className="h-4 w-4" />
+                  <UserIcon className="h-4 w-4" />
                   <span className="text-sm font-medium">Log In</span>
                 </Button>
               </div>

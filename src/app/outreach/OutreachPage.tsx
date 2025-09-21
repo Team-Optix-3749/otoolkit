@@ -4,17 +4,14 @@
 import { useEffect, useCallback, Suspense } from "react";
 import useSWRInfinite from "swr/infinite";
 import Link from "next/link";
-// Data
 import { listUserData } from "@/lib/db/user";
-// App Hooks
 import { useNavbar } from "@/hooks/useNavbar";
 import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { useIsMobile } from "@/hooks/use-mobile";
-// Utils / Types
 import { recordToImageUrl } from "@/lib/pbaseClient";
+import type { UserData, User } from "@/lib/types/pocketbase";
 import { formatMinutes, getBadgeStatusStyles } from "@/lib/utils";
-import type { t_pb_User, t_pb_UserData } from "@/lib/types";
-// UI Components
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -23,13 +20,13 @@ import { Button } from "@/components/ui/button";
 import Loader from "@/components/Loader";
 import { OutreachTable } from "./OutreachTable";
 import ActivityGraph from "./ActivityGraph";
-// Icons
+
 import { Users, Clock, TrendingUp, Calendar } from "lucide-react";
 
 const PAGE_SIZE = 15;
 
 interface PaginatedResponse {
-  items: t_pb_UserData[];
+  items: UserData[];
   page: number;
   perPage: number;
   totalItems: number;
@@ -38,8 +35,8 @@ interface PaginatedResponse {
 
 type Props = {
   isAdmin?: boolean;
-  userData?: t_pb_UserData;
-  user: t_pb_User;
+  userData?: UserData;
+  user: User;
   outreachMinutesCutoff: number;
 };
 

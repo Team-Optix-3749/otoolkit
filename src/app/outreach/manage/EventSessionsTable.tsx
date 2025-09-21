@@ -1,6 +1,13 @@
 // React
 import { useState } from "react";
-// UI
+
+import { toast } from "sonner";
+import { pb, recordToImageUrl } from "@/lib/pbaseClient";
+import { formatMinutes } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import type { OutreachEvent, OutreachSession } from "@/lib/types/pocketbase";
+import { deleteSession } from "@/lib/db/outreach";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,21 +19,13 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-// Hooks
-import { useIsMobile } from "@/hooks/use-mobile";
-// Data utils
-import { recordToImageUrl } from "@/lib/pbaseClient";
-import { formatMinutes } from "@/lib/utils";
-import { deleteSession } from "@/lib/db/outreach";
-// Types
-import type { t_pb_OutreachEvent, t_pb_OutreachSession } from "@/lib/types";
-// Feedback / Icons
-import { toast } from "sonner";
+
 import { Clock, Trash2 } from "lucide-react";
 
+
 interface EventSessionsTableProps {
-  event: t_pb_OutreachEvent;
-  sessions: t_pb_OutreachSession[];
+  event: OutreachEvent;
+  sessions: OutreachSession[];
   onSessionDeleted: () => void;
 }
 

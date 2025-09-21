@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { createSessionsBulk, updateEvent } from "@/lib/db/outreach";
 import { listAllUsers } from "@/lib/db/user";
 import { formatMinutes, cn } from "@/lib/utils";
-import type { t_pb_OutreachEvent, t_pb_User } from "@/lib/types";
+import type { OutreachEvent, User } from "@/lib/types/pocketbase";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ import {
 } from "lucide-react";
 
 interface LogHoursDialogProps {
-  event: t_pb_OutreachEvent;
+  event: OutreachEvent;
   onHoursLogged: () => void;
   // Optional: parent can revalidate events after rename/date change
   onEventUpdated?: () => void;
@@ -64,7 +65,7 @@ export default function LogHoursDialog({
   onEventUpdated
 }: LogHoursDialogProps) {
   const [open, setOpen] = useState(false);
-  const [users, setUsers] = useState<t_pb_User[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [fetchingUsers, setFetchingUsers] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
@@ -444,7 +445,7 @@ function UserCombobox({
   disabled,
   placeholder = "Select user..."
 }: {
-  users: t_pb_User[];
+  users: User[];
   value: string;
   onChange: (val: string) => void;
   disabled?: boolean;

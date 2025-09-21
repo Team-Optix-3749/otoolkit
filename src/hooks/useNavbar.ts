@@ -2,11 +2,11 @@
 
 import { useSyncExternalStore } from "react";
 
-// Global state store
 let navbarState = {
   forcedDisable: false,
   renderOnlyHome: false,
-  defaultToShown: true
+  defaultToShown: true,
+  mobileNavbarSide: "left"
 };
 
 const listeners = new Set<() => void>();
@@ -41,6 +41,11 @@ const setDefaultShown = (value: boolean) => {
   emitChange();
 };
 
+const setMobileNavbarSide = (value: "left" | "right") => {
+  navbarState = { ...navbarState, mobileNavbarSide: value };
+  emitChange();
+};
+
 export function useNavbar() {
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
@@ -48,6 +53,7 @@ export function useNavbar() {
     ...state,
     setForcedDisable,
     setRenderOnlyHome,
-    setDefaultShown
+    setDefaultShown,
+    setMobileNavbarSide
   } as const;
 }
