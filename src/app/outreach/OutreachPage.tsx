@@ -1,30 +1,30 @@
 "use client";
 
+// React / Hooks
 import { useEffect, useCallback, Suspense } from "react";
 import useSWRInfinite from "swr/infinite";
 import Link from "next/link";
-
-import { pb, recordToImageUrl } from "@/lib/pbaseClient";
+// Data
+import { listUserData } from "@/lib/db/user";
+// App Hooks
 import { useNavbar } from "@/hooks/useNavbar";
 import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { t_pb_User, t_pb_UserData } from "@/lib/types";
-
+// Utils / Types
+import { recordToImageUrl } from "@/lib/pbaseClient";
 import { formatMinutes, getBadgeStatusStyles } from "@/lib/utils";
-
-import { Users, Clock, TrendingUp, Calendar } from "lucide-react";
+import type { t_pb_User, t_pb_UserData } from "@/lib/types";
+// UI Components
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarImage, AvatarFallback } from "@radix-ui/react-avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { OutreachTable } from "./OutreachTable";
-import Loading from "./loading";
-import Loader from "@/components/Loader";
-import ActivityGraph from "./ActivityGraph";
 import { Button } from "@/components/ui/button";
-
-// Import the activity graph component
-// import OutreachActivityGraph from "./OutreachActivityGraph";
+import Loader from "@/components/Loader";
+import { OutreachTable } from "./OutreachTable";
+import ActivityGraph from "./ActivityGraph";
+// Icons
+import { Users, Clock, TrendingUp, Calendar } from "lucide-react";
 
 const PAGE_SIZE = 15;
 
@@ -46,14 +46,7 @@ type Props = {
 const fetcher = async (url: string): Promise<PaginatedResponse> => {
   const [, page] = url.split("?page=");
   const pageNum = parseInt(page) || 1;
-
-  const response = await pb
-    .collection("UserData")
-    .getList<t_pb_UserData>(pageNum, PAGE_SIZE, {
-      expand: "user"
-    });
-
-  return response;
+  return await listUserData(pageNum, PAGE_SIZE);
 };
 
 const getKey = (

@@ -1,11 +1,12 @@
 "use client";
 
+// React
 import { useEffect, useState } from "react";
-
-import { pb, recordToImageUrl } from "@/lib/pbaseClient";
+// Types / Utils
 import type { t_pb_UserData } from "@/lib/types";
 import { formatMinutes, formatPbDate, getBadgeStatusStyles } from "@/lib/utils";
-
+import { recordToImageUrl } from "@/lib/pbaseClient";
+// UI
 import {
   Table,
   TableBody,
@@ -14,11 +15,11 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-// Removed ScrollArea to prevent nested scrolling / clipping
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+// Local Components
 import EditUserDialog from "./EditUserDialog";
 
 type OutreachTableProps = {

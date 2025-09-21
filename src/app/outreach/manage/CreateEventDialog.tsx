@@ -1,7 +1,6 @@
+// React
 import { useState } from "react";
-import { toast } from "sonner";
-import { pb } from "@/lib/pbaseClient";
-import { Plus } from "lucide-react";
+// UI
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +12,12 @@ import {
   DialogTrigger,
   DialogFooter
 } from "@/components/ui/dialog";
+// Data
+import { createEvent } from "@/lib/db/outreach";
+// Feedback
+import { toast } from "sonner";
+// Icons
+import { Plus } from "lucide-react";
 
 interface CreateEventDialogProps {
   onEventCreated: () => void;
@@ -37,7 +42,7 @@ export default function CreateEventDialog({
 
     setLoading(true);
     try {
-      await pb.collection("OutreachEvents").create({
+      await createEvent({
         name: formData.name,
         date: formData.date
       });
@@ -95,7 +100,8 @@ export default function CreateEventDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}>
+              onClick={() => setOpen(false)}
+              disabled={loading}>
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>

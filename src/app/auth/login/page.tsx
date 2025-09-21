@@ -1,9 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useIsHydrated } from "@/hooks/useIsHydrated";
+import { useNavbar } from "@/hooks/useNavbar";
+import { loginEmailPass, loginOAuth } from "@/lib/auth";
+import { BaseStates, SimpleLoginStates } from "@/lib/states";
 
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,14 +19,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Loader from "@/components/Loader";
-import Image from "next/image";
 import PasswordBlock from "../PasswordBlock";
-
-import { useIsHydrated } from "@/hooks/useIsHydrated";
-import { useNavbar } from "@/hooks/useNavbar";
-import { loginEmailPass, loginOAuth } from "@/lib/auth";
-import { BaseStates, SimpleLoginStates } from "@/lib/states";
 import SkeletonLoginForm from "./SkeletonLoginForm";
 
 export default function LoginForm() {
@@ -46,40 +44,21 @@ export default function LoginForm() {
     }, 300);
   }, [router]);
 
-  const handleGoogleOAuth = async function () {
-    const loader = toast.loading("Continue on the popup ...");
+  const handleOAuth = async function (type: "discord" | "google") {
+    const loader = toast.loading("Continue on the popup ...", {
+      id: "oAuthLoader"
+    });
 
-    const state = await loginOAuth("google");
-
-    toast.dismiss(loader);
+    const state = await loginOAuth(type);
 
     switch (state) {
       case BaseStates.SUCCESS:
-        toast.success("Login successful!");
+        toast.success("Login successful!", { id: "oAuthLoader" });
         redirectToHome();
         break;
       case BaseStates.ERROR:
       default:
-        toast.error("Something went wrong :(");
-        break;
-    }
-  };
-
-  const handleDiscordOAuth = async function () {
-    const loader = toast.loading("Continue on the popup ...");
-
-    const state = await loginOAuth("discord");
-
-    toast.dismiss(loader);
-
-    switch (state) {
-      case BaseStates.SUCCESS:
-        toast.success("Login successful!");
-        redirectToHome();
-        break;
-      case BaseStates.ERROR:
-      default:
-        toast.error("Something went wrong :(");
+        toast.error("Something went wrong :(", { id: "oAuthLoader" });
         break;
     }
   };
@@ -105,35 +84,39 @@ export default function LoginForm() {
       });
 
       toast.dismiss();
-      const loader = toast.loading("Logging In ...");
+      toast.loading("Logging In ...", { id: "sLoader" });
 
       let state = SimpleLoginStates.ERR_UNKNOWN;
       state = await loginEmailPass(email, password);
 
-      toast.dismiss(loader);
-
       switch (state) {
         case SimpleLoginStates.SUCCESS:
-          toast.success("Login successful!");
+          toast.success("Login successful!", { id: "sLoader" });
           redirectToHome();
           break;
         case SimpleLoginStates.ERR_EMAIL_NOT_PROVIDED:
-          toast.error("Email is required.");
+          toast.error("Email is required.", { id: "sLoader" });
           break;
         case SimpleLoginStates.ERR_PASSWORD_NOT_PROVIDED:
-          toast.error("Password is required.");
+          toast.error("Password is required.", { id: "sLoader" });
           break;
         case SimpleLoginStates.ERR_INVALID_EMAIL:
-          toast.error("Please enter a valid email address.");
+          toast.error("Please enter a valid email address.", { id: "sLoader" });
           break;
         case SimpleLoginStates.ERR_PASSWORD_TOO_SHORT:
-          toast.error("Password must be at least 8 characters long.");
+          toast.error("Password must be at least 8 characters long.", {
+            id: "sLoader"
+          });
           break;
         case SimpleLoginStates.ERR_EMAIL_NOT_FOUND:
-          toast.error("Email not found. Please check your email.");
+          toast.error("Email not found. Please check your email.", {
+            id: "sLoader"
+          });
           break;
         case SimpleLoginStates.ERR_INCORRECT_PASSWORD:
-          toast.error("Incorrect password. Please try again.");
+          toast.error("Incorrect password. Please try again.", {
+            id: "sLoader"
+          });
           break;
         case SimpleLoginStates.ERR_USER_USES_OAUTH:
           toast.error(
@@ -142,7 +125,9 @@ export default function LoginForm() {
           break;
         case SimpleLoginStates.ERR_UNKNOWN:
         default:
-          toast.error("Something went wrong. Please try again later.");
+          toast.error("Something went wrong. Please try again later.", {
+            id: "sLoader"
+          });
           break;
       }
     },
@@ -178,7 +163,7 @@ export default function LoginForm() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={handleGoogleOAuth}>
+                    onClick={handleOAuth.bind(null, "google")}>
                     <Image
                       src="/google.svg"
                       alt="Google Logo"
@@ -191,7 +176,7 @@ export default function LoginForm() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={handleDiscordOAuth}>
+                    onClick={handleOAuth.bind(null, "discord")}>
                     <Image
                       src="/discord.svg"
                       alt="Discord Logo"

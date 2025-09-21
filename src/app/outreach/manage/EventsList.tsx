@@ -1,12 +1,13 @@
 import { toast } from "sonner";
-import { pb } from "@/lib/pbaseClient";
+import { deleteEvent } from "@/lib/db/outreach";
 import type { t_pb_OutreachEvent } from "@/lib/types";
+
 import { Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import LogHoursDialog from "./LogHoursDialog";
 import Loader from "@/components/Loader";
+import LogHoursDialog from "./LogHoursDialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EventsListProps {
   events: t_pb_OutreachEvent[] | undefined;
@@ -35,7 +36,7 @@ export default function EventsList({
     }
 
     try {
-      await pb.collection("OutreachEvents").delete(eventId);
+      await deleteEvent(eventId);
       toast.success("Event deleted successfully");
       onEventDeleted();
     } catch (error) {

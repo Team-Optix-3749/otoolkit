@@ -3,11 +3,8 @@ import { ClientResponseError } from "pocketbase";
 import { pb } from "@/lib/pbaseClient";
 import { PB_Codes } from "@/lib/states";
 import { Dispatch, SetStateAction } from "react";
-import { t_pb_User } from "../types";
-import { getPocketbaseCookie, setPocketbaseCookie } from "../pbaseServer";
-
-type StateTuple = [null, string] | [ClientResponseError, null];
-type PromiseStateTuple = Promise<StateTuple>;
+import { t_pb_User, type t_pb_UserData } from "../types";
+import { setPocketbaseCookie } from "../pbaseServer";
 
 export async function newUser(email: string, password: string, name: string) {
   try {
@@ -20,7 +17,7 @@ export async function newUser(email: string, password: string, name: string) {
     console.warn(error);
   }
 
-  const res1 = await create_User(email, password, name);
+  const res1 = await createUser(email, password, name);
   if (res1[0] instanceof ClientResponseError) {
     return [PB_Codes[res1[0].status as keyof typeof PB_Codes], null];
   }
@@ -28,11 +25,11 @@ export async function newUser(email: string, password: string, name: string) {
   return [null, res1[1]];
 }
 
-export async function create_User(
+export async function createUser(
   email: string,
   password: string,
   name: string
-): PromiseStateTuple {
+) {
   try {
     const user = await pb.collection("users").create({
       email,
@@ -58,4 +55,16 @@ export function registerAuthCallback(
     setUser(record as t_pb_User);
     setPocketbaseCookie(pb.authStore.exportToCookie());
   }, true);
+}
+export async function listUserData(page: number, perPage: number) {
+  return await pb.collection("UserData").getList<t_pb_UserData>(page, perPage, {
+    expand: "user"
+  });
+}
+
+export async function listAllUsers() {
+  const users = await pb.collection("users").getFullList<t_pb_User>({
+    sort: "name"
+  });
+  return users.toSorted((a, b) => a.name.localeCompare(b.name));
 }
