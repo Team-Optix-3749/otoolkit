@@ -36,7 +36,7 @@ interface ScoutingFormProps {
 
 export default function ScoutingForm({ config, userId }: ScoutingFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { setDefaultShown, setMobileNavbarSide } = useNavbar();
+  const { setDefaultExpanded, setMobileNavbarSide } = useNavbar();
 
   const resolver = createResolver(config);
 
@@ -52,11 +52,11 @@ export default function ScoutingForm({ config, userId }: ScoutingFormProps) {
   } = methods;
 
   useEffect(() => {
-    setDefaultShown(false);
+    setDefaultExpanded(false);
     setMobileNavbarSide("right");
 
     console.log(userId);
-  }, [setDefaultShown, setMobileNavbarSide]);
+  }, [setDefaultExpanded, setMobileNavbarSide]);
 
   const onSubmit = async function (data: any) {
     setIsSubmitting(true);

@@ -11,7 +11,6 @@ export const metadata: Metadata = {
     "Outreach tracking, scouting, and team operations for FRC Team Optix 3749."
 };
 
-
 const features = [
   {
     title: "Track Outreach Hours",
@@ -55,11 +54,9 @@ const valuePoints = [
 ];
 
 export default function Home() {
-
   return (
-    <main className="space-y-32 pb-40">
-      <NavbarServerConfig setDefaultShown={false} />
-      <NavbarTip />
+    <main className="space-y-32 pb-14">
+      <NavbarServerConfig setDefaultExpanded={false} />
 
       <section className="pt-32 container mx-auto px-6 max-w-5xl flex flex-col items-center text-center gap-8">
         <h1 className="text-5xl md:text-6xl font-bold tracking-tight bg-gradient-to-br from-primary to-chart-2 bg-clip-text text-transparent">
@@ -227,12 +224,6 @@ export default function Home() {
         <nav className="flex flex-wrap gap-4">
           <Link href="#" className="hover:text-foreground transition">
             Features
-          </Link>
-          <Link href="#" className="hover:text-foreground transition">
-            Value
-          </Link>
-          <Link href="#" className="hover:text-foreground transition">
-            Flow
           </Link>
           <Link href="#" className="hover:text-foreground transition">
             Contribute

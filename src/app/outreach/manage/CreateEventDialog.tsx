@@ -18,6 +18,7 @@ import { createEvent } from "@/lib/db/outreach";
 import { toast } from "sonner";
 // Icons
 import { Plus } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface CreateEventDialogProps {
   onEventCreated: () => void;
@@ -42,17 +43,18 @@ export default function CreateEventDialog({
 
     setLoading(true);
     try {
-      await createEvent({
+      const created = await createEvent({
         name: formData.name,
         date: formData.date
       });
 
+      logger.info({ eventId: created.id }, "Event created via dialog");
       toast.success("Event created successfully");
       setFormData({ name: "", date: "" });
       setOpen(false);
       onEventCreated();
-    } catch (error) {
-      console.error("Error creating event:", error);
+    } catch (error: any) {
+      logger.error({ err: error?.message }, "Error creating event");
       toast.error("Failed to create event");
     } finally {
       setLoading(false);

@@ -7,6 +7,7 @@ import { formatMinutes } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { OutreachEvent, OutreachSession } from "@/lib/types/pocketbase";
 import { deleteSession } from "@/lib/db/outreach";
+import { logger } from "@/lib/logger";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,10 +42,11 @@ export default function EventSessionsTable({
     setDeletingId(sessionId);
     try {
       await deleteSession(sessionId);
+      logger.warn({ sessionId, eventId: event.id }, "Session deleted from table");
       toast.success("Session deleted successfully");
       onSessionDeleted();
-    } catch (error) {
-      console.error("Error deleting session:", error);
+    } catch (error: any) {
+      logger.error({ sessionId, eventId: event.id, err: error?.message }, "Failed to delete session");
       toast.error("Failed to delete session");
     } finally {
       setDeletingId(null);

@@ -4,7 +4,7 @@ import { createSessionsBulk, updateEvent } from "@/lib/db/outreach";
 import { listAllUsers } from "@/lib/db/user";
 import { formatMinutes, cn } from "@/lib/utils";
 import type { OutreachEvent, User } from "@/lib/types/pocketbase";
-
+import { logger } from "@/lib/logger";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,11 +92,11 @@ export default function LogHoursDialog({
 
   useEffect(() => {
     if (open) {
-      let set = true;
-      if (event.name != eventName) set = false;
-      if (event.date.split(" ").at(0) != eventDate) set = false;
+      let hasChanges = false;
+      if (event.name !== eventName) hasChanges = true;
+      if (event.date.split(" ").at(0) !== eventDate) hasChanges = true;
 
-      setIsSaveDisabled(set);
+      setIsSaveDisabled(!hasChanges);
     }
   }, [eventName, eventDate, open, event.name, event.date]);
 
@@ -111,8 +111,8 @@ export default function LogHoursDialog({
     setFetchingUsers(true);
     try {
       setUsers(await listAllUsers());
-    } catch (error) {
-      console.error("Error fetching users:", error);
+    } catch (error: any) {
+      logger.error({ err: error?.message }, "Error fetching users");
       toast.error("Failed to load users");
     } finally {
       setFetchingUsers(false);
@@ -180,6 +180,7 @@ export default function LogHoursDialog({
         }))
       );
 
+      logger.info({ eventId: event.id, count: valid.length }, "Hours logged");
       toast.success(
         `Hours logged successfully for ${valid.length} user${
           valid.length > 1 ? "s" : ""
@@ -197,8 +198,8 @@ export default function LogHoursDialog({
 
       setOpen(false);
       onHoursLogged();
-    } catch (error) {
-      console.error("Error logging hours:", error);
+    } catch (error: any) {
+      logger.error({ eventId: event.id, err: error?.message }, "Error logging hours");
       toast.error("Failed to log hours");
     } finally {
       setSubmitting(false);
@@ -222,10 +223,11 @@ export default function LogHoursDialog({
         name: eventName,
         date: eventDate
       });
+      logger.info({ eventId: event.id }, "Event updated");
       toast.success("Event updated");
       onEventUpdated?.();
-    } catch (error) {
-      console.error("Error updating event:", error);
+    } catch (error: any) {
+      logger.error({ eventId: event.id, err: error?.message }, "Error updating event");
       toast.error("Failed to update event");
     } finally {
       setSavingEvent(false);

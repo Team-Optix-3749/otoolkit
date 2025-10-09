@@ -1,6 +1,5 @@
 import type { OutreachEvent, OutreachSession } from "@/lib/types/pocketbase";
 import { Calendar, Clock, Users } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import LogHoursDialog from "./LogHoursDialog";
 import EventSessionsTable from "./EventSessionsTable";

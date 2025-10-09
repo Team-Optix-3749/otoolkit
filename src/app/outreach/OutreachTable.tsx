@@ -23,7 +23,7 @@ import EditUserDialog from "./EditUserDialog";
 
 type OutreachTableProps = {
   allUsers: UserData[];
-  isAdmin: boolean;
+  canManage: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
   onUpdate: () => void;
@@ -63,7 +63,7 @@ const SortedTableHeads = [
 // Main OutreachTable component
 export function OutreachTable({
   allUsers,
-  isAdmin,
+  canManage,
   isLoading,
   isLoadingMore,
   outreachMinutesCutoff,
@@ -225,7 +225,7 @@ export function OutreachTable({
                         )} text-sm`}>
                         {formatMinutes(userData.outreachMinutes)}
                       </Badge>
-                      {isAdmin && <EditUserDialog userData={userData} />}
+                      {canManage && <EditUserDialog userData={userData} />}
                     </div>
                   </div>
                 </CardContent>
@@ -289,13 +289,17 @@ export function OutreachTable({
                 </div>
               </TableHead>
             ))}
-            {isAdmin && <TableHead className="min-w-[8rem]">Manage</TableHead>}
+            {canManage && (
+              <TableHead className="min-w-[8rem]">Manage</TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8">
+              <TableCell
+                colSpan={canManage ? 5 : 4}
+                className="text-center py-8">
                 <div className="flex items-center justify-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                   Loading...
@@ -304,7 +308,9 @@ export function OutreachTable({
             </TableRow>
           ) : allUsers.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8">
+              <TableCell
+                colSpan={canManage ? 5 : 4}
+                className="text-center py-8">
                 No user data found
               </TableCell>
             </TableRow>
@@ -348,7 +354,7 @@ export function OutreachTable({
                 <TableCell>
                   {formatPbDate(userData.lastOutreachEvent) || "N/A"}
                 </TableCell>
-                {isAdmin && (
+                {canManage && (
                   <TableCell>
                     <EditUserDialog
                       userData={userData}
@@ -361,7 +367,9 @@ export function OutreachTable({
           )}
           {isLoadingMore && (
             <TableRow>
-              <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-4">
+              <TableCell
+                colSpan={canManage ? 5 : 4}
+                className="text-center py-4">
                 <div className="flex items-center justify-center gap-2">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
                   Loading more...

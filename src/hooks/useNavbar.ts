@@ -3,10 +3,11 @@
 import { useSyncExternalStore } from "react";
 
 let navbarState = {
-  forcedDisable: false,
-  renderOnlyHome: false,
-  defaultToShown: true,
-  mobileNavbarSide: "left"
+  isDisabled: false,
+  renderMinimal: false,
+  defaultExpanded: true,
+  mobileNavbarSide: "left",
+  expanded: true
 };
 
 const listeners = new Set<() => void>();
@@ -26,18 +27,18 @@ function getSnapshot() {
   return navbarState;
 }
 
-const setForcedDisable = (value: boolean) => {
-  navbarState = { ...navbarState, forcedDisable: value };
+const setIsDisabled = (value: boolean) => {
+  navbarState = { ...navbarState, isDisabled: value };
   emitChange();
 };
 
-const setRenderOnlyHome = (value: boolean) => {
-  navbarState = { ...navbarState, renderOnlyHome: value };
+const doMinimalRendering = (value: boolean) => {
+  navbarState = { ...navbarState, renderMinimal: value };
   emitChange();
 };
 
-const setDefaultShown = (value: boolean) => {
-  navbarState = { ...navbarState, defaultToShown: value };
+const setDefaultExpanded = (value: boolean) => {
+  navbarState = { ...navbarState, defaultExpanded: value };
   emitChange();
 };
 
@@ -46,14 +47,20 @@ const setMobileNavbarSide = (value: "left" | "right") => {
   emitChange();
 };
 
+const setExpanded = (value: boolean) => {
+  navbarState = { ...navbarState, expanded: value };
+  emitChange();
+};
+
 export function useNavbar() {
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 
   return {
     ...state,
-    setForcedDisable,
-    setRenderOnlyHome,
-    setDefaultShown,
-    setMobileNavbarSide
+    setIsDisabled,
+    doMinimalRendering,
+    setDefaultExpanded,
+    setMobileNavbarSide,
+    setExpanded
   } as const;
 }

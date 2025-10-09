@@ -18,7 +18,7 @@ import EventDetails from "./EventDetails";
 import { Calendar } from "lucide-react";
 
 export default function ManageEventsPage() {
-  const { setDefaultShown } = useNavbar();
+  const { setDefaultExpanded } = useNavbar();
   const isHydrated = useIsHydrated();
   const isMobile = useIsMobile();
 
@@ -56,8 +56,8 @@ export default function ManageEventsPage() {
   }, []);
 
   useEffect(() => {
-    setDefaultShown(false);
-  }, [setDefaultShown]);
+    setDefaultExpanded(false);
+  }, [setDefaultExpanded]);
 
   if (!isHydrated) {
     return (

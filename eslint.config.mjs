@@ -1,18 +1,16 @@
 import { FlatCompat } from "@eslint/eslintrc";
 
 const compat = new FlatCompat({
-  baseDirectory: import.meta.url
+  baseDirectory: import.meta.dirname
 });
 
 const eslintConfig = [
   ...compat.config({
-    extends: ['next'],
+    extends: ['next', 'next/core-web-vitals'],
     rules: {
-      // "no-console": "warn",
+      "no-console": "warn",
       "no-unused-vars": "warn",
       "prefer-const": "warn",
-      "@typescript-eslint/no-unused-vars": "warn",
-      "@typescript-eslint/no-explicit-any": "warn",
     }
   })
 ];

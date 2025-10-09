@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
 import { loginOAuth, signupEmailPass } from "@/lib/auth";
 import { BaseStates, SignupStates } from "@/lib/states";
+import { logger } from "@/lib/logger";
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -23,14 +24,12 @@ import PasswordBlock from "../PasswordBlock";
 import SkeletonSignupForm from "./SkeletonSignupForm";
 
 export default function SignupForm() {
-  const { setRenderOnlyHome, setDefaultShown } = useNavbar();
+  const { doMinimalRendering, setDefaultExpanded } = useNavbar();
 
   const router = useRouter();
   const isHydrated = useIsHydrated();
 
   const redirectToHome = useCallback(() => {
-    console.log("Redirecting ...");
-
     router.prefetch("/");
 
     setTimeout(() => {
@@ -47,11 +46,13 @@ export default function SignupForm() {
     switch (state) {
       case BaseStates.SUCCESS:
         toast.success("Login successful!", { id: "oAuthLoader" });
+        logger.info({ provider: type }, "OAuth signup/login successful");
         redirectToHome();
         break;
       case BaseStates.ERROR:
       default:
         toast.error("Something went wrong :(", { id: "oAuthLoader" });
+        logger.error({ provider: type }, "OAuth signup/login failed");
         break;
     }
   };
@@ -63,15 +64,8 @@ export default function SignupForm() {
       const formData = new FormData(e.currentTarget);
       let name = formData.get("name")?.toString();
       let email = formData.get("email")?.toString();
-      let password1 = formData.get("password1")?.toString();
-      let password2 = formData.get("password2")?.toString();
-
-      console.log("Form submitted with:", {
-        name,
-        email,
-        password1,
-        password2
-      });
+      const password1 = formData.get("password1")?.toString();
+      const password2 = formData.get("password2")?.toString();
 
       if (!name || !email || !password1 || !password2) {
         toast.error("Please fill in all fields.");
@@ -90,6 +84,7 @@ export default function SignupForm() {
       switch (state) {
         case SignupStates.SUCCESS:
           toast.success("Account created successfully!", { id: "aLoader" });
+          logger.info({ email }, "User signup successful");
           redirectToHome();
           break;
         case SignupStates.ERR_EMAIL_NOT_PROVIDED:
@@ -144,6 +139,7 @@ export default function SignupForm() {
           toast.error("Something went wrong. Please try again later.", {
             id: "aLoader"
           });
+          logger.error({ email }, "Unknown signup error");
           break;
       }
     },
@@ -151,14 +147,14 @@ export default function SignupForm() {
   );
 
   useEffect(() => {
-    setRenderOnlyHome(true);
-    setDefaultShown(false);
+    doMinimalRendering(true);
+    setDefaultExpanded(false);
 
     return () => {
-      setRenderOnlyHome(false);
-      setDefaultShown(true);
+      doMinimalRendering(false);
+      setDefaultExpanded(true);
     };
-  }, [handleSubmit, setDefaultShown, setRenderOnlyHome]);
+  }, [setDefaultExpanded, doMinimalRendering]);
 
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">

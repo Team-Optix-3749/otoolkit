@@ -7,6 +7,7 @@ import {
   ScoutingSubmission,
   SelectOption
 } from "../types/scouting";
+import { logger } from "../logger";
 
 export const dexie = new Dexie("ScoutingFormResponses") as Dexie & {
   responses: EntityTable<DexieScoutingSubmission, "id">;
@@ -52,8 +53,8 @@ export async function fetchTeamOptions() {
     }
 
     return [];
-  } catch (error) {
-    console.error(`Failed to fetch options for 'sk_EventTeams':`, error);
+  } catch (error: any) {
+    logger.error({ key: "sk_EventTeams", err: error?.message }, "Failed to fetch select options");
     return [];
   }
 }
@@ -70,8 +71,8 @@ export async function fetchSelectOptions(key: string) {
     }
 
     return [];
-  } catch (error) {
-    console.error(`Failed to fetch options for '${key}':`, error);
+  } catch (error: any) {
+    logger.error({ key, err: error?.message }, "Failed to fetch select options");
     return [];
   }
 }
@@ -79,8 +80,8 @@ export async function fetchSelectOptions(key: string) {
 export async function getAllResponses() {
   try {
     return await dexie.responses.toArray();
-  } catch (error) {
-    console.error("Failed to fetch responses from IndexedDB:", error);
+  } catch (error: any) {
+    logger.error({ err: error?.message }, "Failed to fetch responses from IndexedDB");
     return [];
   }
 }
@@ -100,13 +101,13 @@ export async function uploadResponses() {
       date: response.date
     }));
 
-    console.log("Formatted responses for upload:", formattedResponses);
+    logger.info({ count: formattedResponses.length }, "Prepared responses for upload");
 
     // TODO: Implement actual upload logic
     // This is where you'll add the upload functionality
     return formattedResponses;
-  } catch (error) {
-    console.error("Failed to get responses for upload:", error);
+  } catch (error: any) {
+    logger.error({ err: error?.message }, "Failed to get responses for upload");
     throw error;
   }
 }
@@ -114,8 +115,9 @@ export async function uploadResponses() {
 export async function markResponseAsUploaded(id: number) {
   try {
     await dexie.responses.update(id, { uploaded: true });
-  } catch (error) {
-    console.error(`Failed to mark response ${id} as uploaded:`, error);
+    logger.info({ id }, "Marked response as uploaded");
+  } catch (error: any) {
+    logger.error({ id, err: error?.message }, "Failed to mark response uploaded");
     throw error;
   }
 }

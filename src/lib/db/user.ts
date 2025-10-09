@@ -4,7 +4,7 @@ import { pb } from "@/lib/pbaseClient";
 import type { User, UserData } from "@/lib/types/pocketbase";
 import { PB_Codes } from "@/lib/states";
 import { setPocketbaseCookie } from "../pbaseServer";
-
+import { logger } from "../logger";
 
 export async function newUser(email: string, password: string, name: string) {
   try {
@@ -13,9 +13,7 @@ export async function newUser(email: string, password: string, name: string) {
       .getFirstListItem(`email="${email}"`);
 
     if (preExisting.id) return ["ALREADY_EXISTS", null];
-  } catch (error: any) {
-    console.warn(error);
-  }
+  } catch (error: any) {}
 
   const res1 = await createUser(email, password, name);
   if (res1[0] instanceof ClientResponseError) {
@@ -40,9 +38,10 @@ export async function createUser(
       role: "member"
     });
 
+    logger.info({ userId: user.id }, "User created");
     return [null, user.id];
   } catch (error: any) {
-    console.log("User creation failed:", error);
+    logger.error({ email, err: error?.message }, "User creation failed");
 
     return [error, null];
   }
@@ -66,5 +65,18 @@ export async function listAllUsers() {
   const users = await pb.collection("users").getFullList<User>({
     sort: "name"
   });
-return users;
+  return users;
+}
+
+export async function getUserData(userId: string): Promise<UserData | null> {
+  try {
+    const data = await pb
+      .collection("UserData")
+      .getFirstListItem<UserData>(`user='${userId}'`, {
+        expand: "user"
+      });
+    return data;
+  } catch (error: any) {
+    return null;
+  }
 }

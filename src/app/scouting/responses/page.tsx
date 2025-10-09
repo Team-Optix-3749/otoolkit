@@ -48,12 +48,12 @@ export default function ResponsesPage() {
   // Cancellation ref for in-component uploads
   const cancelRef = useRef(false);
 
-  const { setDefaultShown, setMobileNavbarSide } = useNavbar();
+  const { setDefaultExpanded, setMobileNavbarSide } = useNavbar();
 
   useEffect(() => {
-    setDefaultShown(false);
+    setDefaultExpanded(false);
     setMobileNavbarSide("right");
-  }, [setDefaultShown]);
+  }, [setDefaultExpanded]);
 
   const loadResponses = async () => {
     setIsLoading(true);

@@ -1,45 +1,50 @@
 import { pb } from "../pbaseClient";
-import type { t_pb_OutreachEvent, t_pb_OutreachSession } from "../types";
+import { OutreachEvent, OutreachSession } from "@/lib/types/pocketbase";
+import { logger } from "../logger";
 
 export async function fetchEvents() {
-  return await pb.collection("OutreachEvents").getFullList<t_pb_OutreachEvent>({
+  return await pb.collection("OutreachEvents").getFullList<OutreachEvent>({
     sort: "-created"
   });
 }
 
 export async function createEvent(data: { name: string; date: string }) {
-  return await pb.collection("OutreachEvents").create(data);
+  const res = await pb.collection("OutreachEvents").create(data);
+  logger.info({ eventId: res.id, name: data.name }, "Outreach event created");
+  return res;
 }
 
 export async function updateEvent(
   id: string,
-  data: Partial<Pick<t_pb_OutreachEvent, "name" | "date">>
+  data: Partial<Pick<OutreachEvent, "name" | "date">>
 ) {
-  return await pb.collection("OutreachEvents").update(id, data);
+  const res = await pb.collection("OutreachEvents").update(id, data);
+  logger.info({ eventId: id, ...data }, "Outreach event updated");
+  return res;
 }
 
 export async function deleteEvent(id: string) {
-  return await pb.collection("OutreachEvents").delete(id);
+  await pb.collection("OutreachEvents").delete(id);
+  logger.warn({ eventId: id }, "Outreach event deleted");
 }
 
 export async function fetchSessionsForEvent(eventId: string) {
-  return await pb
-    .collection("OutreachSessions")
-    .getFullList<t_pb_OutreachSession>({
-      filter: `event = "${eventId}"`,
-      expand: "user",
-      sort: "-created"
-    });
+  return await pb.collection("OutreachSessions").getFullList<OutreachSession>({
+    filter: `event = "${eventId}"`,
+    expand: "user",
+    sort: "-created"
+  });
 }
 
 export async function deleteSession(id: string) {
-  return await pb.collection("OutreachSessions").delete(id);
+  await pb.collection("OutreachSessions").delete(id);
+  logger.warn({ sessionId: id }, "Outreach session deleted");
 }
 
 export async function createSessionsBulk(
   sessions: { userId: string; eventId: string; minutes: number }[]
 ) {
-  return await Promise.all(
+  const created = await Promise.all(
     sessions.map((s) =>
       pb.collection("OutreachSessions").create(
         {
@@ -51,12 +56,17 @@ export async function createSessionsBulk(
       )
     )
   );
+  logger.info(
+    { count: created.length, eventId: sessions[0]?.eventId },
+    "Bulk outreach sessions created"
+  );
+  return created;
 }
 
 export async function fetchUserSessionEventDates(userId: string) {
   const results = await pb
     .collection("OutreachSessions")
-    .getFullList<t_pb_OutreachSession>({
+    .getFullList<OutreachSession>({
       filter: `user="${userId}"`,
       expand: "event"
     });

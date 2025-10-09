@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { deleteEvent } from "@/lib/db/outreach";
 import type { OutreachEvent } from "@/lib/types/pocketbase";
+import { logger } from "@/lib/logger";
 
 import { Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,10 +38,11 @@ export default function EventsList({
 
     try {
       await deleteEvent(eventId);
+      logger.warn({ eventId }, "Event deleted via list");
       toast.success("Event deleted successfully");
       onEventDeleted();
-    } catch (error) {
-      console.error("Error deleting event:", error);
+    } catch (error: any) {
+      logger.error({ eventId, err: error?.message }, "Failed to delete event");
       toast.error("Failed to delete event");
     }
   };

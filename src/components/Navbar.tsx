@@ -12,8 +12,13 @@ import { useNavbar } from "@/hooks/useNavbar";
 import { recordToImageUrl } from "@/lib/pbaseClient";
 import { logout } from "@/lib/auth";
 
-
-import { User as UserIcon, Clock, Menu, SearchCode, LogOut } from "lucide-react";
+import {
+  User as UserIcon,
+  Clock,
+  Menu,
+  SearchCode,
+  LogOut
+} from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +36,18 @@ import NavbarSkeleton from "./skeletons/NavbarSkeleton";
 import { Separator } from "@/components/ui/separator";
 import { User } from "@/lib/types/pocketbase";
 
-const PROFILE_ITEM = {
+type NavItem = {
+  showInMinimal?: boolean;
+  icon?: React.ReactNode;
+  label: string;
+  url: string;
+  msg?: string;
+  func?: () => boolean;
+};
+
+const PROFILE_ITEM: NavItem = {
+  showInMinimal: true,
+  label: "Profile",
   url: "/user/profile",
   msg: "Going to Profile",
   func: () => {
@@ -40,28 +56,20 @@ const PROFILE_ITEM = {
   }
 };
 
-const LOGIN_ITEM = {
+const LOGIN_ITEM: NavItem = {
+  icon: <UserIcon className="h-5 w-5" />,
+  label: "Log In",
   url: "/auth/login",
   msg: "Going to Login"
 };
 
-const NAV_ITEMS = [
+const NAV_ITEMS: NavItem[] = [
   {
-    onlyHomePersist: true,
+    showInMinimal: true,
     icon: <UserIcon className="h-5 w-5" />,
     label: "Home",
     url: "/",
     msg: ""
-  },
-  {
-    icon: <SearchCode className="h-5 w-5" />,
-    label: "Scouting",
-    url: "/scouting",
-    msg: "Lets go scout!",
-    func: () => {
-      toast.warning("Under Construction");
-      return false;
-    }
   },
   {
     icon: <SearchCode className="h-5 w-5" />,
@@ -83,9 +91,9 @@ const NAV_ITEMS = [
   // }
 ];
 
-const USER_ITEMS = [
+const USER_ITEMS: NavItem[] = [
   {
-    onlyHomePersist: true,
+    showInMinimal: true,
     icon: <LogOut className="h-5 w-5" />,
     label: "Sign Out",
     url: "/",
@@ -116,8 +124,8 @@ export default function Navbar({}) {
 
   if (!isHydrated) return null; //<NavbarSkeleton navItems={allItems} />;
 
-  const navItems = state.renderOnlyHome
-    ? NAV_ITEMS.filter((item) => item.onlyHomePersist)
+  const navItems = state.renderMinimal
+    ? NAV_ITEMS.filter((item) => item.showInMinimal)
     : NAV_ITEMS;
 
   const onNavigate = function ({
@@ -135,7 +143,7 @@ export default function Navbar({}) {
     router.push(url);
   };
 
-  if (state.forcedDisable) return;
+  if (state.isDisabled) return;
 
   return isSmallScreen ? (
     <Mobile {...state} {...{ navItems, user, onNavigate }} />
@@ -144,8 +152,18 @@ export default function Navbar({}) {
   );
 }
 
-function Mobile({ navItems, user, mobileNavbarSide, onNavigate }: ChildProps) {
+function Mobile({
+  navItems,
+  user,
+  mobileNavbarSide,
+  onNavigate,
+  setExpanded
+}: ChildProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    setExpanded(isOpen);
+  }, [isOpen, setExpanded]);
 
   const handleNavigation = (item: {
     url: string;
@@ -162,7 +180,10 @@ function Mobile({ navItems, user, mobileNavbarSide, onNavigate }: ChildProps) {
         <Button
           variant="outline"
           size="icon"
-          className={`fixed top-4 ${mobileNavbarSide}-4 z-50 h-10 w-10 rounded-lg shadow-lg bg-card/95 backdrop-blur-xl border border-border hover:bg-muted`}>
+          className={
+            `fixed top-4 z-50 h-10 w-10 rounded-lg shadow-lg bg-card/95 backdrop-blur-xl border border-border hover:bg-muted` +
+            (mobileNavbarSide === "left" ? " left-4" : " right-4")
+          }>
           <Menu className="h-5 w-5" />
           <span className="sr-only">Open menu</span>
         </Button>
@@ -184,19 +205,8 @@ function Mobile({ navItems, user, mobileNavbarSide, onNavigate }: ChildProps) {
                 />
                 <AvatarFallback className="bg-muted text-muted-foreground text-base rounded-full flex items-center justify-center h-full w-full">
                   {(user.name || "U").charAt(0)}
-
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col">
-                <span className="text-base font-medium text-foreground">
-                  {user.name || "Unknown User"}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {user.role
-                    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-                    : "? Role ?"}
-                </span>
-              </div>
               <div className="flex flex-col">
                 <span className="text-base font-medium text-foreground">
                   {user.name || "Unknown User"}
@@ -220,8 +230,8 @@ function Mobile({ navItems, user, mobileNavbarSide, onNavigate }: ChildProps) {
                 onClick={() =>
                   handleNavigation({
                     url: item.url,
-                    msg: item?.msg,
-                    func: item?.func
+                    msg: item.msg,
+                    func: item.func
                   })
                 }>
                 <div className="flex items-center space-x-3">
@@ -231,7 +241,9 @@ function Mobile({ navItems, user, mobileNavbarSide, onNavigate }: ChildProps) {
               </Button>
             ))}
 
-            {user &&
+            <Separator className="my-4" />
+
+            {user ? (
               USER_ITEMS.map((item, index) => (
                 <Button
                   key={index}
@@ -249,21 +261,7 @@ function Mobile({ navItems, user, mobileNavbarSide, onNavigate }: ChildProps) {
                     <span className="text-sm font-medium">{item.label}</span>
                   </div>
                 </Button>
-              ))}
-
-            <Separator className="my-4" />
-
-            {/* Account/Login Button */}
-            {user ? (
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-left h-12 text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                onClick={() => handleNavigation(PROFILE_ITEM)}>
-                <div className="flex items-center space-x-3">
-                  <UserIcon className="h-5 w-5" />
-                  <span className="text-sm font-medium">Account</span>
-                </div>
-              </Button>
+              ))
             ) : (
               <Button
                 variant="default"
@@ -282,9 +280,19 @@ function Mobile({ navItems, user, mobileNavbarSide, onNavigate }: ChildProps) {
   );
 }
 
-function Desktop({ navItems, user, onNavigate, defaultToShown }: ChildProps) {
+function Desktop({
+  navItems,
+  user,
+  onNavigate,
+  setExpanded,
+  defaultExpanded: defaultToShown
+}: ChildProps) {
   const [isVisible, setIsVisible] = useState(true);
   const navbarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setExpanded(isVisible);
+  }, [isVisible, setExpanded]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -352,8 +360,8 @@ function Desktop({ navItems, user, onNavigate, defaultToShown }: ChildProps) {
                 key={index}
                 onClick={onNavigate.bind(null, {
                   url: item.url,
-                  msg: item?.msg,
-                  func: item?.func
+                  msg: item.msg,
+                  func: item.func
                 })}>
                 <div className="size-4 transition-all duration-300 ease-in-out">
                   {item.icon}
@@ -373,8 +381,8 @@ function Desktop({ navItems, user, onNavigate, defaultToShown }: ChildProps) {
                   key={index}
                   onClick={onNavigate.bind(null, {
                     url: item.url,
-                    msg: item?.msg,
-                    func: item?.func
+                    msg: item.msg,
+                    func: item.func
                   })}>
                   <div className="size-4 transition-all duration-300 ease-in-out">
                     {item.icon}

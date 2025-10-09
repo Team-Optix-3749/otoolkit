@@ -1,12 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
 import { loginEmailPass, loginOAuth } from "@/lib/auth";
 import { BaseStates, SimpleLoginStates } from "@/lib/states";
+import { logger } from "@/lib/logger";
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import PasswordBlock from "../PasswordBlock";
 import SkeletonLoginForm from "./SkeletonLoginForm";
 
 export default function LoginForm() {
-  const { setRenderOnlyHome, setDefaultShown } = useNavbar();
+  const { doMinimalRendering, setDefaultExpanded } = useNavbar();
 
   const router = useRouter();
   const isHydrated = useIsHydrated();
@@ -34,8 +35,6 @@ export default function LoginForm() {
   });
 
   const redirectToHome = useCallback(() => {
-    console.log("Redirecting ...");
-
     router.prefetch("/");
 
     setTimeout(() => {
@@ -53,11 +52,13 @@ export default function LoginForm() {
     switch (state) {
       case BaseStates.SUCCESS:
         toast.success("Login successful!", { id: "oAuthLoader" });
+        logger.info({ provider: type }, "OAuth login successful");
         redirectToHome();
         break;
       case BaseStates.ERROR:
       default:
         toast.error("Something went wrong :(", { id: "oAuthLoader" });
+        logger.error({ provider: type }, "OAuth login failed");
         break;
     }
   };
@@ -67,10 +68,8 @@ export default function LoginForm() {
       e.preventDefault();
 
       const formData = new FormData(e.currentTarget);
-      let email = formData.get("email")?.toString();
-      let password = formData.get("password")?.toString();
-
-      console.log("Form submitted with:", { email, password });
+      const email = formData.get("email")?.toString();
+      const password = formData.get("password")?.toString();
 
       if (!email || !password) {
         toast.error("Email and password are required.");
@@ -91,6 +90,7 @@ export default function LoginForm() {
       switch (state) {
         case SimpleLoginStates.SUCCESS:
           toast.success("Login successful!", { id: "sLoader" });
+          logger.info({ email }, "Password login successful");
           redirectToHome();
           break;
         case SimpleLoginStates.ERR_EMAIL_NOT_PROVIDED:
@@ -127,21 +127,22 @@ export default function LoginForm() {
           toast.error("Something went wrong. Please try again later.", {
             id: "sLoader"
           });
+          logger.error({ email }, "Unknown login error");
           break;
       }
     },
-    [loginData, redirectToHome]
+    [redirectToHome]
   );
 
   useEffect(() => {
-    setRenderOnlyHome(true);
-    setDefaultShown(false);
+    doMinimalRendering(true);
+    setDefaultExpanded(false);
 
     return () => {
-      setRenderOnlyHome(false);
-      setDefaultShown(true);
+      doMinimalRendering(false);
+      setDefaultExpanded(true);
     };
-  }, [handleSubmit, setDefaultShown, setRenderOnlyHome]);
+  }, [setDefaultExpanded, doMinimalRendering]);
 
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
@@ -162,7 +163,7 @@ export default function LoginForm() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={handleOAuth.bind(null, "google")}>
+                    onClick={handleOAuth.bind(null, "google")}>\
                     <Image
                       src="/google.svg"
                       alt="Google Logo"
@@ -175,7 +176,7 @@ export default function LoginForm() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={handleOAuth.bind(null, "discord")}>
+                    onClick={handleOAuth.bind(null, "discord")}>\
                     <Image
                       src="/discord.svg"
                       alt="Discord Logo"
@@ -212,7 +213,8 @@ export default function LoginForm() {
                         </Label>
                         <a
                           href="/auth/forgot"
-                          className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-foreground">
+                          className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-foreground"
+                        >
                           Forgot your password?
                         </a>
                       </div>
@@ -225,7 +227,8 @@ export default function LoginForm() {
                     </div>
                     <Button
                       type="submit"
-                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
                       Login
                     </Button>
                   </form>
@@ -236,7 +239,8 @@ export default function LoginForm() {
                   Don&apos;t have an account?{" "}
                   <a
                     href="/auth/signup"
-                    className="underline underline-offset-4 text-foreground hover:text-primary">
+                    className="underline underline-offset-4 text-foreground hover:text-primary"
+                  >
                     Sign Up
                   </a>
                 </div>

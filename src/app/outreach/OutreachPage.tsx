@@ -22,6 +22,7 @@ import { OutreachTable } from "./OutreachTable";
 import ActivityGraph from "./ActivityGraph";
 
 import { Users, Clock, TrendingUp, Calendar } from "lucide-react";
+import { hasPermission } from "@/lib/permissions";
 
 const PAGE_SIZE = 15;
 
@@ -34,7 +35,7 @@ interface PaginatedResponse {
 }
 
 type Props = {
-  isAdmin?: boolean;
+  canManage?: boolean;
   userData?: UserData;
   user: User;
   outreachMinutesCutoff: number;
@@ -55,12 +56,12 @@ const getKey = (
 };
 
 export default function OutreachPage({
-  isAdmin = false,
+  canManage = false,
   userData,
   user,
   outreachMinutesCutoff
 }: Props) {
-  const { setDefaultShown } = useNavbar();
+  const { setDefaultExpanded, setMobileNavbarSide } = useNavbar();
   const isHydrated = useIsHydrated();
   const isMobile = useIsMobile();
 
@@ -91,8 +92,9 @@ export default function OutreachPage({
   }, [mutate]);
 
   useEffect(() => {
-    setDefaultShown(false);
-  }, [setDefaultShown]);
+    setDefaultExpanded(false);
+    setMobileNavbarSide("right");
+  }, [setDefaultExpanded]);
 
   if (!isHydrated)
     return (
@@ -130,13 +132,13 @@ export default function OutreachPage({
             </h1>
           </div>
           <p className="text-muted-foreground text-sm truncate">
-            {isAdmin
+            {canManage
               ? "Manage and view user outreach data"
               : "View outreach data"}
           </p>
         </div>
 
-        {isAdmin && (
+        {canManage && (
           <Button variant="outline" size="sm" asChild>
             <Link href="/outreach/manage">Manage Events</Link>
           </Button>
@@ -250,14 +252,14 @@ export default function OutreachPage({
         {/* Activity Graph Card - Hidden on mobile to keep layout clean */}
         {!isMobile && (
           <Card className="grow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
                 Activity Overview
               </CardTitle>
               <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>{" "}
-            <CardContent className="pt-2 size-full flex justify-center items-center">
+            </CardHeader>
+            <CardContent className="size-full flex justify-center items-center grow-0">
               <Suspense fallback={<Loader />}>
                 <ActivityGraph id={user.id} />
               </Suspense>
@@ -272,7 +274,7 @@ export default function OutreachPage({
       <div className="flex-1 min-h-0 overflow-y-auto">
         <OutreachTable
           allUsers={allUsers}
-          isAdmin={isAdmin}
+          canManage={canManage}
           isLoading={isLoading}
           isLoadingMore={isLoadingMore || false}
           onUpdate={handleUpdate}
