@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useIsHydrated } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
@@ -10,6 +10,7 @@ import { BaseStates, SimpleLoginStates } from "@/lib/states";
 import { logger } from "@/lib/logger";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,24 +25,23 @@ import PasswordBlock from "../PasswordBlock";
 import SkeletonLoginForm from "./SkeletonLoginForm";
 
 export default function LoginForm() {
-  const { doMinimalRendering, setDefaultExpanded } = useNavbar();
-
   const router = useRouter();
+
+  const { doMinimalRendering, setDefaultExpanded } = useNavbar();
   const isHydrated = useIsHydrated();
 
-  const [loginData, setLoginData] = useState({
-    email: "",
-    password: ""
-  });
+  const searchParams = useSearchParams();
+  const redirectRoute = useMemo(
+    () => searchParams.get("redirect") || "/",
+    [searchParams]
+  );
 
-  const redirectToHome = useCallback(() => {
-    router.prefetch("/");
-
-    setTimeout(() => {
-      router.push("/");
-      toast.dismiss();
-    }, 300);
-  }, [router]);
+  const redirect = useCallback(() => {
+    console.log("Redirecting to:", redirectRoute);
+    
+    toast.dismiss();
+    router.push(redirectRoute);
+  }, [router, redirectRoute]);
 
   const handleOAuth = async function (type: "discord" | "google") {
     toast.loading("Continue on the popup ...", {
@@ -53,7 +53,7 @@ export default function LoginForm() {
       case BaseStates.SUCCESS:
         toast.success("Login successful!", { id: "oAuthLoader" });
         logger.info({ provider: type }, "OAuth login successful");
-        redirectToHome();
+        redirect();
         break;
       case BaseStates.ERROR:
       default:
@@ -76,11 +76,6 @@ export default function LoginForm() {
         return;
       }
 
-      setLoginData({
-        email,
-        password
-      });
-
       toast.dismiss();
       toast.loading("Logging In ...", { id: "sLoader" });
 
@@ -91,7 +86,7 @@ export default function LoginForm() {
         case SimpleLoginStates.SUCCESS:
           toast.success("Login successful!", { id: "sLoader" });
           logger.info({ email }, "Password login successful");
-          redirectToHome();
+          redirect();
           break;
         case SimpleLoginStates.ERR_EMAIL_NOT_PROVIDED:
           toast.error("Email is required.", { id: "sLoader" });
@@ -131,12 +126,15 @@ export default function LoginForm() {
           break;
       }
     },
-    [redirectToHome]
+    [redirect]
   );
 
   useEffect(() => {
     doMinimalRendering(true);
     setDefaultExpanded(false);
+
+    console.log("Prefetching route:", redirectRoute);
+    router.prefetch(redirectRoute);
 
     return () => {
       doMinimalRendering(false);
@@ -211,12 +209,11 @@ export default function LoginForm() {
                         <Label htmlFor="password" className="text-foreground">
                           Password
                         </Label>
-                        <a
+                        <Link
                           href="/auth/forgot"
-                          className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-foreground"
-                        >
+                          className="ml-auto text-sm underline-offset-4 hover:underline text-muted-foreground hover:text-foreground">
                           Forgot your password?
-                        </a>
+                        </Link>
                       </div>
                       <PasswordBlock
                         name="password"
@@ -227,8 +224,7 @@ export default function LoginForm() {
                     </div>
                     <Button
                       type="submit"
-                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
+                      className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
                       Login
                     </Button>
                   </form>
@@ -237,12 +233,11 @@ export default function LoginForm() {
                 )}
                 <div className="text-center text-sm text-muted-foreground">
                   Don&apos;t have an account?{" "}
-                  <a
+                  <Link
                     href="/auth/signup"
-                    className="underline underline-offset-4 text-foreground hover:text-primary"
-                  >
+                    className="underline underline-offset-4 text-foreground hover:text-primary">
                     Sign Up
-                  </a>
+                  </Link>
                 </div>
               </div>
             </CardContent>

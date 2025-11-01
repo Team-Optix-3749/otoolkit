@@ -74,7 +74,7 @@ export default function EventSessionsTable({
   }
 
   return (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="flex flex-col gap-3 h-full overflow-scroll">
       <h4 className="font-semibold">Logged Hours</h4>
       <div className="overflow-y-auto border rounded-md overflow-x-hidden">
         <Table>

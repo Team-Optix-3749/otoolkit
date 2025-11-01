@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PBServer } from "./lib/pb";
+import { getPBAuthCookieWithGetter } from "./lib/pbServerUtils";
 
 const adminOnlyRoutes = ["/admin", "/testing", "/outreach/manage"];
 const authedOnlyRoutes = [
@@ -22,11 +23,17 @@ export async function middleware(request: NextRequest) {
   if (![...authedOnlyRoutes, ...adminOnlyRoutes].includes(nextUrl.pathname))
     return NextResponse.next();
 
-  const pb = await PBServer.getInstance();
+  const pbAuthCookie = await getPBAuthCookieWithGetter((key: string) =>
+    request.cookies.get(key)
+  );
+
+  const pb = new PBServer(pbAuthCookie || "");
   const record = pb.authStore.record;
 
   if (!record) {
+    nextUrl.searchParams.set("redirect", nextUrl.pathname);
     nextUrl.pathname = "/auth/login";
+
     return NextResponse.redirect(nextUrl);
   }
 

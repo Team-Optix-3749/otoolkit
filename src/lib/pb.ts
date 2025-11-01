@@ -9,7 +9,7 @@ import PocketBase, {
 import { logger } from "./logger";
 
 import { User } from "./types/pocketbase";
-import { getPBAuthCookie } from "./pbServerUtils";
+import { getPBAuthCookie, getPBAuthCookieWithGetter } from "./pbServerUtils";
 import { ErrorCodes, ErrorToString } from "./states";
 
 if (!process.env.NEXT_PUBLIC_PB_URL) {
@@ -85,6 +85,12 @@ export class PBClientBase {
         code = "01x02";
       } else {
         code = `01x${error.status}` as any;
+        console.error(
+          "PocketBase Error:",
+          code,
+          ErrorToString[code],
+          error.data
+        );
       }
 
       return [code, null];
@@ -175,7 +181,7 @@ export class PBBrowser extends PBClientBase {
   }
 
   static getInstance() {
-    if (!PBBrowser.instance) {
+    if (PBBrowser.instance === null) {
       PBBrowser.instance = new PBBrowser();
     }
     return PBBrowser.instance;
@@ -188,7 +194,7 @@ export class PBBrowser extends PBClientBase {
 }
 
 export class PBServer extends PBClientBase {
-  private constructor(cookie: string = "") {
+  public constructor(cookie: string = "") {
     const authStore = new LocalAuthStore();
 
     authStore.loadFromCookie(cookie);
@@ -204,5 +210,9 @@ export class PBServer extends PBClientBase {
   static async getClient() {
     const instance = await PBServer.getInstance();
     return instance.pbClient;
+  }
+
+  [Symbol.dispose]() {
+    this.pb.authStore.clear();
   }
 }

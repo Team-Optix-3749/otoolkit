@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction } from "react";
-import type { ListResult } from "pocketbase";
+import type { ListResult, OnStoreChangeFunc } from "pocketbase";
 
 import type { User, UserData } from "@/lib/types/pocketbase";
 import { clearPBAuthCookie } from "../pbServerUtils";
@@ -47,15 +47,10 @@ export async function createUser(
 }
 
 export function registerAuthCallback(
-  setUser: Dispatch<SetStateAction<User | null>>,
+  cb: OnStoreChangeFunc,
   client: PBClientBase
 ) {
-  const authStore = client.authStore;
-
-  return authStore.onChange(async (token, record) => {
-    setUser(record as User | null);
-    clearPBAuthCookie();
-  }, true);
+  client.authStore.onChange(cb, true);
 }
 
 export async function listUserData(

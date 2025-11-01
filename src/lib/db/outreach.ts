@@ -126,7 +126,8 @@ export async function fetchUserSessionEventDates(
     undefined,
     {
       filter: `user="${userId}"`,
-      expand: "event"
+      expand: "event",
+      requestKey: null
     }
   );
 
@@ -143,7 +144,10 @@ export async function fetchUserSessionEventDates(
 export async function getOutreachMinutesCutoff(client: PBClientBase) {
   const [error, record] = await client.getFirstListItem(
     "Settings",
-    "key='OutreachMinsCutoff'"
+    "key='OutreachMinsCutoff'",
+    {
+      requestKey: null
+    }
   );
 
   if (error) {

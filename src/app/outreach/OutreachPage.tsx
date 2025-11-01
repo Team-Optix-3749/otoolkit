@@ -51,9 +51,6 @@ const fetcher = async (url: string): Promise<PaginatedResponse> => {
   );
 
   if (error) {
-    console.error(
-      error ? ErrorToString[error] ?? "PocketBase error" : "No data returned"
-    );
     return null as any;
   }
 

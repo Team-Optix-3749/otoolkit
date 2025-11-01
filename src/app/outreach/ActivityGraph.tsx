@@ -71,10 +71,6 @@ export default function ActivityGraph({ id }: OutreachActivityGraphProps) {
       );
 
       if (error || !timestamps) {
-        console.error(
-          "Failed to fetch outreach activity",
-          error ? ErrorToString[error] ?? error : "No data"
-        );
         setChartData([]);
         return;
       }

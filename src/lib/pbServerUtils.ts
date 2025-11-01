@@ -1,18 +1,20 @@
 "use server";
 
-import "server-only";
-
+import {
+  RequestCookie,
+  RequestCookies
+} from "next/dist/compiled/@edge-runtime/cookies";
 import { cookies } from "next/headers";
 
-const COOKIE_NAME = "pb_auth_token";
-const COOKIE_EXPIRATION_DAYS =
+const PB_AUTH_COOKIE_NAME = "pb_auth_token";
+const PB_AUTH_COOKIE_EXP_DAYS =
   parseInt(process.env.COOKIE_EXPIRATION_DAYS || "") || 30;
 
-const cookieExpirationMS = 1000 * 60 * 60 * 24 * COOKIE_EXPIRATION_DAYS;
+const cookieExpirationMS = 1000 * 60 * 60 * 24 * PB_AUTH_COOKIE_EXP_DAYS;
 
 export async function setPBAuthCookie(value: string) {
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, value, {
+  cookieStore.set(PB_AUTH_COOKIE_NAME, value, {
     expires: new Date(Date.now() + cookieExpirationMS),
     secure: false,
     httpOnly: true,
@@ -24,10 +26,16 @@ export async function setPBAuthCookie(value: string) {
 
 export async function getPBAuthCookie() {
   const cookieStore = await cookies();
-  return cookieStore.get(COOKIE_NAME)?.value || "";
+  return getPBAuthCookieWithGetter((key: string) => cookieStore.get(key));
+}
+
+export async function getPBAuthCookieWithGetter(
+  getter: (key: string) => RequestCookie | undefined
+) {
+  return getter(PB_AUTH_COOKIE_NAME)?.value || "";
 }
 
 export async function clearPBAuthCookie() {
   const cookieStore = await cookies();
-  cookieStore.delete(COOKIE_NAME);
+  cookieStore.delete(PB_AUTH_COOKIE_NAME);
 }

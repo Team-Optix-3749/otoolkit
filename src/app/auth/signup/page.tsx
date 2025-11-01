@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PasswordBlock from "../PasswordBlock";
 import SkeletonSignupForm from "./SkeletonSignupForm";
+import Link from "next/link";
 
 export default function SignupForm() {
   const { doMinimalRendering, setDefaultExpanded } = useNavbar();
@@ -268,11 +269,11 @@ export default function SignupForm() {
                 )}
                 <div className="text-center text-sm text-muted-foreground">
                   Already have an account?{" "}
-                  <a
+                  <Link
                     href="/auth/login"
                     className="underline underline-offset-4 text-foreground hover:text-primary">
                     Log In
-                  </a>
+                  </Link>
                 </div>
               </div>
             </CardContent>
