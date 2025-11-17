@@ -8,7 +8,6 @@ import { listUserData } from "@/lib/db/user";
 import { useNavbar } from "@/hooks/useNavbar";
 import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { UserData, User } from "@/lib/types/models";
 import { formatMinutes, getBadgeStatusStyles } from "@/lib/utils";
 import { ErrorToString } from "@/lib/types/states";
@@ -41,8 +40,7 @@ type Props = {
 const fetcher = async (url: string): Promise<PaginatedResponse> => {
   const [, page] = url.split("?page=");
   const pageNum = parseInt(page) || 1;
-  const supabase = createSupabaseBrowserClient();
-  const [error, data] = await listUserData(pageNum, PAGE_SIZE, supabase);
+  const [error, data] = await listUserData(pageNum, PAGE_SIZE);
 
   if (error) {
     throw new Error(error);

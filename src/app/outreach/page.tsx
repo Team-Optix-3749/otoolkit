@@ -1,4 +1,3 @@
-import { hasPermission } from "@/lib/permissions";
 import { getOutreachMinutesCutoff } from "@/lib/db/outreach";
 
 import OutreachPage from "./OutreachPage";
