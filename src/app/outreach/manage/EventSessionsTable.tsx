@@ -8,7 +8,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import type { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
 import { deleteSession } from "@/lib/db/outreach";
 import { logger } from "@/lib/logger";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,15 +38,14 @@ export default function EventSessionsTable({
 }: EventSessionsTableProps) {
   const isMobile = useIsMobile();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const handleDeleteSession = async (sessionId: string) => {
     setDeletingId(sessionId);
     try {
-      const [error] = await deleteSession(sessionId, supabase);
+      const [error] = await deleteSession(sessionId);
 
       if (error) {
-        throw new Error(ErrorToString[error] ?? error);
+        throw new Error(error);
       }
 
       logger.warn(

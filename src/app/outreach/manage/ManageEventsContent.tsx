@@ -36,9 +36,7 @@ export default function ManageEventsContent({
     const [error, data] = await fetchEvents(supabase);
 
     if (error || !data) {
-      throw new Error(
-        error ? ErrorToString[error] ?? "Supabase error" : "No data returned"
-      );
+      throw new Error(error);
     }
 
     return data;
@@ -59,9 +57,7 @@ export default function ManageEventsContent({
     );
 
     if (error || !data) {
-      throw new Error(
-        error ? ErrorToString[error] ?? "Supabase error" : "No data returned"
-      );
+      throw new Error(error);
     }
 
     return data;

@@ -35,7 +35,6 @@ export default function EventsList({
   variant = "page"
 }: EventsListProps) {
   const isSheet = variant === "sheet";
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const handleDeleteEvent = async (eventId: string) => {
     if (
@@ -47,11 +46,12 @@ export default function EventsList({
     }
 
     try {
-      const [error] = await deleteEvent(eventId, supabase);
+      const [error] = await deleteEvent(eventId);
 
       if (error) {
-        throw new Error(ErrorToString[error] ?? error);
+        throw new Error(error);
       }
+
       logger.warn({ eventId }, "Event deleted via list");
       toast.success("Event deleted successfully");
       onEventDeleted();

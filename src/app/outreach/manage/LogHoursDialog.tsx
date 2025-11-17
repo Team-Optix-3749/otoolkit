@@ -109,9 +109,7 @@ export default function LogHoursDialog({
       const [error, allUsers] = await listAllUsers(supabase);
 
       if (error || !allUsers) {
-        throw new Error(
-          error ? ErrorToString[error] ?? "Supabase error" : "No users"
-        );
+        throw new Error(error);
       }
 
       setUsers(allUsers);
@@ -193,7 +191,7 @@ export default function LogHoursDialog({
       );
 
       if (error) {
-        throw new Error(ErrorToString[error] ?? error);
+        throw new Error(error);
       }
 
       logger.info({ eventId: event.id, count: valid.length }, "Hours logged");
@@ -248,7 +246,7 @@ export default function LogHoursDialog({
       );
 
       if (error) {
-        throw new Error(ErrorToString[error] ?? error);
+        throw new Error(error);
       }
       logger.info({ eventId: event.id }, "Event updated");
       toast.success("Event updated");

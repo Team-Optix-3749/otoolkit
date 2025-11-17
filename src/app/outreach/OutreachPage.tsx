@@ -35,9 +35,6 @@ interface PaginatedResponse {
 }
 
 type Props = {
-  canManage?: boolean;
-  userData?: UserData;
-  user: User | null;
   outreachMinutesCutoff: number;
 };
 
@@ -48,10 +45,7 @@ const fetcher = async (url: string): Promise<PaginatedResponse> => {
   const [error, data] = await listUserData(pageNum, PAGE_SIZE, supabase);
 
   if (error) {
-    console.error(
-      error ? ErrorToString[error] ?? "Supabase error" : "No data returned"
-    );
-    throw new Error(ErrorToString[error] ?? "Failed to fetch user data");
+    throw new Error(error);
   }
 
   return data as PaginatedResponse;
@@ -65,17 +59,11 @@ const getKey = (
   return `?page=${pageIndex + 1}`;
 };
 
-export default function OutreachPage({
-  canManage = false,
-  userData,
-  user,
-  outreachMinutesCutoff
-}: Props) {
+export default function OutreachPage({ outreachMinutesCutoff }: Props) {
   const { setDefaultExpanded, setMobileNavbarSide } = useNavbar();
   const isHydrated = useIsMounted();
   const isMobile = useIsMobile();
-  const currentUser = userData?.expand?.user ?? user;
-  const activityUserId = currentUser?.id ?? userData?.user ?? "";
+
 
   const { data, error, size, setSize, isValidating, mutate } =
     useSWRInfinite<PaginatedResponse>(getKey, fetcher, {
