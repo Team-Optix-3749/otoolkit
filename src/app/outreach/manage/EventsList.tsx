@@ -1,9 +1,10 @@
+import { useMemo } from "react";
 import { toast } from "sonner";
 import { deleteEvent } from "@/lib/db/outreach";
-import { PBBrowser } from "@/lib/pb";
 
-import { ErrorToString } from "@/lib/states";
-import type { OutreachEvent } from "@/lib/types/pocketbase";
+import { ErrorToString } from "@/lib/types/states";
+import type { OutreachEvent } from "@/lib/types/supabase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ interface EventsListProps {
   onEventDeleted: () => void;
   onHoursLogged: () => void;
   isMobile?: boolean;
+  variant?: "page" | "sheet";
 }
 
 export default function EventsList({
@@ -29,8 +31,12 @@ export default function EventsList({
   onEventSelect,
   onEventDeleted,
   onHoursLogged,
-  isMobile = false
+  isMobile = false,
+  variant = "page"
 }: EventsListProps) {
+  const isSheet = variant === "sheet";
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+
   const handleDeleteEvent = async (eventId: string) => {
     if (
       !confirm(
@@ -41,7 +47,7 @@ export default function EventsList({
     }
 
     try {
-      const [error] = await deleteEvent(eventId, PBBrowser.getInstance());
+      const [error] = await deleteEvent(eventId, supabase);
 
       if (error) {
         throw new Error(ErrorToString[error] ?? error);
@@ -64,7 +70,7 @@ export default function EventsList({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="h-full">
+        <ScrollArea className={isSheet ? "max-h-[60vh] pr-3" : "h-full"}>
           {!events ? (
             <div className="flex items-center justify-center py-8">
               <Loader />

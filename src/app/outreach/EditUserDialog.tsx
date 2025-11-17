@@ -1,10 +1,10 @@
-import { ChangeEvent, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { formatMinutes } from "@/lib/utils";
 import { manualModifyOutreachHours } from "@/lib/db/hours";
 
-import { BaseStates } from "@/lib/states";
-import { UserData } from "@/lib/types/pocketbase";
+import { BaseStates } from "@/lib/types/states";
+import { UserData } from "@/lib/types/supabase";
 
 import { Button } from "@/components/ui/button";
 import { DialogHeader } from "@/components/ui/dialog";
@@ -16,8 +16,8 @@ import {
   DialogContent,
   DialogTitle
 } from "@/components/ui/dialog";
-import { Edit2 } from "lucide-react";
-import { PBBrowser } from "@/lib/pb";
+import { Edit2, Minus, Plus } from "lucide-react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function EditUserDialog({
   userData,
@@ -28,26 +28,55 @@ export default function EditUserDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [newMinutes, setNewMinutes] = useState(userData.outreachMinutes);
+  const [mode, setMode] = useState<"add" | "subtract">("add");
+  const [adjustment, setAdjustment] = useState(0);
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+
+  useEffect(() => {
+    if (open) {
+      setMode("add");
+      setAdjustment(0);
+    }
+  }, [open]);
+
+  const signedAdjustment = useMemo(() => {
+    const magnitude = Math.abs(adjustment);
+    return mode === "add" ? magnitude : -magnitude;
+  }, [adjustment, mode]);
+
+  const projectedTotal = Math.max(
+    0,
+    userData.outreachMinutes + signedAdjustment
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const deltaMinutes = newMinutes - userData.outreachMinutes;
+    if (signedAdjustment === 0) {
+      toast.error("Enter a number of minutes to adjust by.");
+      setLoading(false);
+      return;
+    }
 
-    console.log(userData);
+    if (projectedTotal < 0) {
+      toast.error("Resulting total cannot be negative.");
+      setLoading(false);
+      return;
+    }
 
     const state = await manualModifyOutreachHours(
       userData.expand?.user.id || "",
-      deltaMinutes,
-      PBBrowser.getInstance()
+      signedAdjustment,
+      supabase
     );
 
     switch (state) {
       case BaseStates.SUCCESS:
         toast.success(
-          `${userData.expand?.user.name} now has ${formatMinutes(newMinutes)}`
+          `${userData.expand?.user.name} now has ${formatMinutes(
+            projectedTotal
+          )}`
         );
         setOpen(false);
         refreshFunc?.();
@@ -62,11 +91,16 @@ export default function EditUserDialog({
     setLoading(false);
   };
 
-  const onTimeInputChange = function (e: ChangeEvent<HTMLInputElement>) {
-    setNewMinutes((curr) => {
-      if (e.target.value === "") return 0;
-      return parseInt(e.target.value) || curr;
-    });
+  const quickAdjustments = [15, 30, 60, 90];
+
+  const handleQuickAdd = (minutes: number) => {
+    setMode("add");
+    setAdjustment(minutes);
+  };
+
+  const handleQuickSubtract = (minutes: number) => {
+    setMode("subtract");
+    setAdjustment(minutes);
   };
 
   return (
@@ -89,17 +123,70 @@ export default function EditUserDialog({
             </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="outreachMinutes">Outreach Minutes</Label>
-            <Input
-              id="outreachMinutes"
-              type="number"
-              value={newMinutes}
-              onChange={onTimeInputChange}
-            />
-            <p className="g text-sm text-muted-foreground">
-              New: {formatMinutes(newMinutes)}
-            </p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="icon"
+                variant={mode === "add" ? "default" : "outline"}
+                onClick={() => setMode("add")}
+                aria-label="Add minutes">
+                <Plus className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant={mode === "subtract" ? "default" : "outline"}
+                onClick={() => setMode("subtract")}
+                aria-label="Subtract minutes">
+                <Minus className="h-4 w-4" />
+              </Button>
+              <Label className="text-sm text-muted-foreground">
+                {mode === "add" ? "Adding minutes" : "Removing minutes"}
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="minutes-delta">Minutes</Label>
+              <Input
+                id="minutes-delta"
+                type="number"
+                value={adjustment}
+                min={0}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  if (Number.isFinite(value) && value >= 0) {
+                    setAdjustment(value);
+                  }
+                }}
+              />
+              <p className="text-sm text-muted-foreground">
+                Resulting total: {formatMinutes(projectedTotal)}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {quickAdjustments.map((minutes) => (
+                <Button
+                  key={`add-${minutes}`}
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleQuickAdd(minutes)}>
+                  +{formatMinutes(minutes)}
+                </Button>
+              ))}
+              {quickAdjustments.map((minutes) => (
+                <Button
+                  key={`subtract-${minutes}`}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleQuickSubtract(minutes)}>
+                  -{formatMinutes(minutes)}
+                </Button>
+              ))}
+            </div>
           </div>
           <div className="flex justify-end gap-2">
             <Button

@@ -1,163 +1,273 @@
-import { OutreachEvent, OutreachSession } from "@/lib/types/pocketbase";
-import { type PBClientBase } from "../pb";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { ErrorCodes } from "../states";
+import type { Database } from "../supabase/types";
+import {
+  mapOutreachEvent,
+  mapOutreachSession,
+  mapProfileToUser
+} from "../supabase/mappers";
+import type { OutreachEvent, OutreachSession } from "../types/models";
+import { ErrorCodes } from "../types/states";
 import { logger } from "../logger";
+import { runFlag } from "../flags";
+
+type TypedClient = SupabaseClient<Database>;
+type OutreachEventRow = Database["public"]["Tables"]["outreach_events"]["Row"];
+type OutreachSessionRow =
+  Database["public"]["Tables"]["outreach_sessions"]["Row"];
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
+
+function toErrorTuple(error?: any): [ErrorCodes, null] {
+  if (!error) return ["01x01", null];
+
+  if (typeof error.code === "string") {
+    if (error.code === "42501") return ["01x403", null];
+    if (error.code === "PGRST116") return ["01x404", null];
+    if (error.code.startsWith("22") || error.code === "23514") {
+      return ["01x400", null];
+    }
+  }
+
+  return ["01x01", null];
+}
 
 export async function fetchEvents(
-  client: PBClientBase
+  client: TypedClient
 ): Promise<[ErrorCodes, null] | [null, OutreachEvent[]]> {
-  return client.getFullList<OutreachEvent>("OutreachEvents", undefined, {
-    sort: "-created"
-  });
+  const { data, error } = await client
+    .from("outreach_events" as const)
+    .select("*")
+    .order("event_date", { ascending: false });
+
+  if (error) {
+    logger.error({ err: error.message }, "Failed to fetch outreach events");
+    return toErrorTuple(error);
+  }
+
+  const rows = (data ?? []) as unknown as OutreachEventRow[];
+  return [null, rows.map((row) => mapOutreachEvent(row))];
 }
 
 export async function createEvent(
   data: { name: string; date: string },
-  client: PBClientBase
+  client: TypedClient
 ): Promise<[ErrorCodes, null] | [null, OutreachEvent]> {
-  const result = await client.createOne<OutreachEvent>("OutreachEvents", data);
+  const { data: inserted, error } = await (
+    client.from("outreach_events" as const) as any
+  )
+    .insert({ name: data.name, event_date: data.date })
+    .select()
+    .single();
 
-  const [, record] = result;
-  if (record) {
-    logger.info(
-      { eventId: record.id, name: data.name },
-      "Outreach event created"
-    );
+  if (error) {
+    logger.error({ err: error.message }, "Failed to create outreach event");
+    return toErrorTuple(error);
   }
 
-  return result;
+  const row = inserted as unknown as OutreachEventRow;
+  logger.info({ eventId: row.id, name: row.name }, "Outreach event created");
+  return [null, mapOutreachEvent(row)];
 }
 
 export async function updateEvent(
   id: string,
   data: Partial<Pick<OutreachEvent, "name" | "date">>,
-  client: PBClientBase
+  client: TypedClient
 ): Promise<[ErrorCodes, null] | [null, OutreachEvent]> {
-  const result = await client.updateOne<OutreachEvent>(
-    "OutreachEvents",
-    id,
-    data
-  );
+  const payload: Partial<OutreachEventRow> = {};
+  if (data.name !== undefined) payload.name = data.name;
+  if (data.date !== undefined) payload.event_date = data.date;
 
-  const [, record] = result;
-  if (record) {
-    logger.info({ eventId: id, ...data }, "Outreach event updated");
+  const { data: updated, error } = await (
+    client.from("outreach_events" as const) as any
+  )
+    .update(payload)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    logger.error({ err: error.message, eventId: id }, "Failed to update event");
+    return toErrorTuple(error);
   }
 
-  return result;
+  const row = updated as unknown as OutreachEventRow;
+  logger.info({ eventId: id, ...payload }, "Outreach event updated");
+  return [null, mapOutreachEvent(row)];
 }
 
 export async function deleteEvent(
   id: string,
-  client: PBClientBase
+  client: TypedClient
 ): Promise<[ErrorCodes, null] | [null, true]> {
-  const result = await client.deleteOne("OutreachEvents", id);
+  const { error } = await (client.from("outreach_events" as const) as any)
+    .delete()
+    .eq("id", id);
 
-  if (!result[0]) {
-    logger.warn({ eventId: id }, "Outreach event deleted");
+  if (error) {
+    logger.error({ err: error.message, eventId: id }, "Failed to delete event");
+    return toErrorTuple(error);
   }
 
-  return result;
+  logger.warn({ eventId: id }, "Outreach event deleted");
+  return [null, true];
 }
 
 export async function fetchSessionsForEvent(
   eventId: string,
-  client: PBClientBase
+  client: TypedClient
 ): Promise<[ErrorCodes, null] | [null, OutreachSession[]]> {
-  return client.getFullList<OutreachSession>("OutreachSessions", undefined, {
-    filter: `event = "${eventId}"`,
-    expand: "user",
-    sort: "-created"
-  });
+  const { data, error } = await client
+    .from("outreach_sessions" as const)
+    .select("*")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    logger.error({ err: error.message, eventId }, "Failed to fetch sessions");
+    return toErrorTuple(error);
+  }
+
+  const rows = (data ?? []) as unknown as OutreachSessionRow[];
+  const profileIds = Array.from(new Set(rows.map((row) => row.user_id)));
+
+  const { data: profiles, error: profilesError } = await client
+    .from("profiles" as const)
+    .select("*")
+    .in("id", profileIds);
+
+  if (profilesError) {
+    logger.error({ err: profilesError.message }, "Failed to enrich sessions");
+    return toErrorTuple(profilesError);
+  }
+
+  const profileMap = new Map<string, ProfileRow>();
+  for (const profile of (profiles ?? []) as unknown as ProfileRow[]) {
+    profileMap.set(profile.id, profile);
+  }
+
+  const { data: eventRow } = await client
+    .from("outreach_events" as const)
+    .select("*")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  const event = eventRow
+    ? mapOutreachEvent(eventRow as unknown as OutreachEventRow)
+    : undefined;
+
+  const mapped = rows.map((row) =>
+    mapOutreachSession(row, {
+      user: profileMap.get(row.user_id),
+      event: event ? (eventRow as unknown as OutreachEventRow) : undefined
+    })
+  );
+
+  return [null, mapped];
 }
 
 export async function deleteSession(
   id: string,
-  client: PBClientBase
+  client: TypedClient
 ): Promise<[ErrorCodes, null] | [null, true]> {
-  const result = await client.deleteOne("OutreachSessions", id);
+  const { error } = await (client.from("outreach_sessions" as const) as any)
+    .delete()
+    .eq("id", id);
 
-  if (!result[0]) {
-    logger.warn({ sessionId: id }, "Outreach session deleted");
+  if (error) {
+    logger.error(
+      { err: error.message, sessionId: id },
+      "Failed to delete session"
+    );
+    return toErrorTuple(error);
   }
 
-  return result;
+  logger.warn({ sessionId: id }, "Outreach session deleted");
+  return [null, true];
 }
 
 export async function createSessionsBulk(
   sessions: { userId: string; eventId: string; minutes: number }[],
-  client: PBClientBase
+  client: TypedClient
 ): Promise<[ErrorCodes, null] | [null, OutreachSession[]]> {
-  const createdSessions: OutreachSession[] = [];
-
-  for (const session of sessions) {
-    const [error, record] = await client.createOne<OutreachSession>(
-      "OutreachSessions",
-      {
-        user: session.userId,
-        event: session.eventId,
-        minutes: session.minutes
-      },
-      { requestKey: null }
-    );
-
-    if (error || !record) {
-      return [error ?? "01x01", null];
-    }
-
-    createdSessions.push(record);
+  if (!sessions.length) {
+    return [null, []];
   }
 
+  const payload = sessions.map((session) => ({
+    user_id: session.userId,
+    event_id: session.eventId,
+    minutes: session.minutes
+  }));
+
+  const { data, error } = await (
+    client.from("outreach_sessions" as const) as any
+  )
+    .insert(payload)
+    .select("*");
+
+  if (error) {
+    logger.error({ err: error.message }, "Failed to create outreach sessions");
+    return toErrorTuple(error);
+  }
+
+  const rows = (data ?? []) as unknown as OutreachSessionRow[];
   logger.info(
-    { count: createdSessions.length, eventId: sessions[0]?.eventId },
+    { count: rows.length, eventId: sessions[0]?.eventId },
     "Bulk outreach sessions created"
   );
 
-  return [null, createdSessions];
+  return [null, rows.map((row) => mapOutreachSession(row))];
 }
 
 export async function fetchUserSessionEventDates(
   userId: string,
-  client: PBClientBase
+  client: TypedClient
 ): Promise<[ErrorCodes, null] | [null, string[]]> {
-  const [error, sessions] = await client.getFullList<OutreachSession>(
-    "OutreachSessions",
-    undefined,
-    {
-      filter: `user="${userId}"`,
-      expand: "event",
-      requestKey: null
-    }
-  );
+  const { data: sessions, error } = await client
+    .from("outreach_sessions" as const)
+    .select("event_id")
+    .eq("user_id", userId);
 
   if (error) {
-    return [error, null];
+    return toErrorTuple(error);
   }
 
-  const dates = (sessions ?? [])
-    .map((r) => r.expand?.event?.date)
-    .filter(Boolean) as string[];
+  const eventIds = Array.from(
+    new Set(((sessions ?? []) as { event_id: string }[]).map((s) => s.event_id))
+  );
+
+  if (!eventIds.length) {
+    return [null, []];
+  }
+
+  const { data: events, error: eventsError } = await client
+    .from("outreach_events" as const)
+    .select("event_date")
+    .in("id", eventIds);
+
+  if (eventsError) {
+    return toErrorTuple(eventsError);
+  }
+
+  const dates = ((events ?? []) as { event_date: string }[])
+    .map((event) => event.event_date)
+    .filter(Boolean);
 
   return [null, dates];
 }
-export async function getOutreachMinutesCutoff(client: PBClientBase) {
-  const [error, record] = await client.getFirstListItem(
-    "Settings",
-    "key='OutreachMinsCutoff'",
-    {
-      requestKey: null
-    }
+
+const DEFAULT_OUTREACH_MINUTES = 900;
+export async function getOutreachMinutesCutoff(client: TypedClient) {
+  const { enabled, value } = await runFlag(
+    "outreach_minutes_cutoff",
+    undefined,
+    client
   );
 
-  if (error) {
-    logger.error(
-      { key: "OutreachMinsCutoff", code: error },
-      "Failed to fetch outreach minutes cutoff"
-    );
-    return 900;
+  if (enabled && typeof value === "number" && value > 0) {
+    return value;
   }
 
-  const outreachMinutesCutoff = parseInt(record.value) || 900;
-  return outreachMinutesCutoff;
+  return DEFAULT_OUTREACH_MINUTES;
 }

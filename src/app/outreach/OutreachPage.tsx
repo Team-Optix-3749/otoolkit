@@ -6,12 +6,12 @@ import useSWRInfinite from "swr/infinite";
 import Link from "next/link";
 import { listUserData } from "@/lib/db/user";
 import { useNavbar } from "@/hooks/useNavbar";
-import { useIsHydrated } from "@/hooks/useIsHydrated";
+import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { PBBrowser, recordToImageUrl } from "@/lib/pb";
-import type { UserData, User } from "@/lib/types/pocketbase";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { UserData, User } from "@/lib/types/models";
 import { formatMinutes, getBadgeStatusStyles } from "@/lib/utils";
-import { ErrorToString } from "@/lib/states";
+import { ErrorToString } from "@/lib/types/states";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -37,24 +37,24 @@ interface PaginatedResponse {
 type Props = {
   canManage?: boolean;
   userData?: UserData;
-  user: User;
+  user: User | null;
   outreachMinutesCutoff: number;
 };
 
 const fetcher = async (url: string): Promise<PaginatedResponse> => {
   const [, page] = url.split("?page=");
   const pageNum = parseInt(page) || 1;
-  const [error, data] = await listUserData(
-    pageNum,
-    PAGE_SIZE,
-    PBBrowser.getInstance()
-  );
+  const supabase = createSupabaseBrowserClient();
+  const [error, data] = await listUserData(pageNum, PAGE_SIZE, supabase);
 
   if (error) {
-    return null as any;
+    console.error(
+      error ? ErrorToString[error] ?? "Supabase error" : "No data returned"
+    );
+    throw new Error(ErrorToString[error] ?? "Failed to fetch user data");
   }
 
-  return data;
+  return data as PaginatedResponse;
 };
 
 const getKey = (
@@ -72,8 +72,10 @@ export default function OutreachPage({
   outreachMinutesCutoff
 }: Props) {
   const { setDefaultExpanded, setMobileNavbarSide } = useNavbar();
-  const isHydrated = useIsHydrated();
+  const isHydrated = useIsMounted();
   const isMobile = useIsMobile();
+  const currentUser = userData?.expand?.user ?? user;
+  const activityUserId = currentUser?.id ?? userData?.user ?? "";
 
   const { data, error, size, setSize, isValidating, mutate } =
     useSWRInfinite<PaginatedResponse>(getKey, fetcher, {
@@ -104,8 +106,7 @@ export default function OutreachPage({
   useEffect(() => {
     setDefaultExpanded(false);
     setMobileNavbarSide("right");
-  }, [setDefaultExpanded]);
-
+  }, [setDefaultExpanded, setMobileNavbarSide]);
   if (!isHydrated)
     return (
       <div className="flex items-center justify-center h-screen">
@@ -165,21 +166,21 @@ export default function OutreachPage({
               <div className="relative flex items-center justify-center">
                 <Avatar className="h-10 w-10 md:h-12 md:w-12 flex-shrink-0">
                   <AvatarImage
-                    src={recordToImageUrl(user)?.toString()}
-                    alt={user.name}
+                    src={currentUser?.avatar ?? undefined}
+                    alt={currentUser?.name ?? "User avatar"}
                     className="rounded-full object-cover"
                   />
                   <AvatarFallback className="bg-gradient-to-br from-blue-800 to-purple-800 text-white text-sm font-semibold rounded-full flex items-center justify-center h-full w-full">
-                    {user.name?.charAt(0).toUpperCase() || "?"}
+                    {currentUser?.name?.charAt(0).toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="font-semibold text-base md:text-lg truncate">
-                  {userData?.expand?.user.name || "Unknown User"}
+                  {currentUser?.name || "Unknown User"}
                 </h3>
                 <p className="text-sm text-muted-foreground truncate">
-                  {userData?.expand?.user.email || "No email"}
+                  {currentUser?.email || "No email"}
                 </p>
               </div>
             </div>
@@ -271,7 +272,7 @@ export default function OutreachPage({
             </CardHeader>
             <CardContent className="size-full flex justify-center items-center grow-0">
               <Suspense fallback={<Loader />}>
-                <ActivityGraph id={user.id} />
+                {activityUserId ? <ActivityGraph id={activityUserId} /> : null}
               </Suspense>
             </CardContent>
           </Card>

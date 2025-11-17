@@ -1,26 +1,30 @@
-import { PBClientBase } from "./pb";
-import { User } from "./types/pocketbase";
+import type { User, UserRole } from "./types/models";
 
-type Permission = (typeof ROLES)[User["role"]][number];
+const guest = ["outreach:view", "scouting:view", "scouting:submit"] as const;
+const member = [
+  ...guest,
+  "settings:view",
+  "scouting:view_submissions"
+] as const;
+const admin = [...member, "outreach:manage", "settings:manage"] as const;
 
-const guest = ["outreach:view"] as const;
-const member = [...guest, "scouting:submit", "scouting:view"] as const;
-const admin = [...member, "outreach:manage", "settings:edit"] as const;
-
-const ROLES = {
+const ROLES: Record<UserRole, readonly string[]> = {
   guest,
   member,
   admin
 } as const;
 
-export function hasPermission(userRole: User["role"], flag: Permission) {
+type Permission = (typeof ROLES)[UserRole][number];
+
+export function hasPermission(
+  userRole: UserRole | null | undefined,
+  flag: Permission
+) {
   if (!userRole || !flag) return false;
 
-  if ((ROLES[userRole] as readonly Permission[]).includes(flag)) return true;
-  return false;
+  return (ROLES[userRole] as readonly Permission[]).includes(flag);
 }
 
-export function getUserRole(client: PBClientBase): User["role"] | null {
-  const role = client.authStore.record?.role || null;
-  return role;
+export function getUserRole(user?: Pick<User, "role"> | null): UserRole | null {
+  return user?.role ?? null;
 }

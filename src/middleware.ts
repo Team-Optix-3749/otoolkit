@@ -1,54 +1,116 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PBServer } from "./lib/pb";
-import { getPBAuthCookieWithGetter } from "./lib/pbServerUtils";
 
-const adminOnlyRoutes = ["/admin", "/testing", "/outreach/manage"];
-const authedOnlyRoutes = [
-  "/dashboard",
-  "/profile",
-  "/settings",
-  "/outreach",
-  "/build",
-  "/scouting"
-];
-// const publicPaths = ["/auth/unauthorized", "/auth/login", "/auth/signup"];
+import { hasPermission } from "./lib/permissions";
+import { runFlag } from "./lib/flags";
+import { getSBServerClient } from "./lib/sbServer";
+
+const ROUTE_PERMISSIONS: Partial<
+  Record<string, Parameters<typeof hasPermission>[1]>
+> = {
+  outreach: "outreach:view",
+  scouting: "scouting:view",
+  settings: "settings:view"
+};
+
+const FLAG_EXEMPT_PAGES = new Set(["settings"]);
 
 export async function middleware(request: NextRequest) {
-  const nextUrl = request.nextUrl.clone();
+  // const originalPath = request.nextUrl.pathname;
+  // const segments = originalPath.split("/").filter(Boolean);
+  // const page = segments.at(0);
 
-  // if (publicPaths.includes(nextUrl.pathname)) {
-  //   return NextResponse.next();
+  // if (!page || page.startsWith("_") || page === "api") {
+  //   return response;
   // }
 
-  if (![...authedOnlyRoutes, ...adminOnlyRoutes].includes(nextUrl.pathname))
-    return NextResponse.next();
+  // let role: UserRole = "guest";
+  // let userId: string | undefined;
 
-  const pbAuthCookie = await getPBAuthCookieWithGetter((key: string) =>
-    request.cookies.get(key)
-  );
+  // const {
+  //   data: { user: authUser }
+  // } = await supabase.auth.getUser();
 
-  const pb = new PBServer(pbAuthCookie || "");
-  const record = pb.authStore.record;
+  // if (authUser) {
+  //   userId = authUser.id;
 
-  if (!record) {
-    nextUrl.searchParams.set("redirect", nextUrl.pathname);
-    nextUrl.pathname = "/auth/login";
+  //   const { data: profile } = await supabase
+  //     .from("profiles")
+  //     .select("role")
+  //     .eq("id", authUser.id)
+  //     .maybeSingle();
 
-    return NextResponse.redirect(nextUrl);
-  }
+  //   role = profile?.role ?? role;
+  // }
 
-  const role = record?.role || "guest";
+  // if (!FLAG_EXEMPT_PAGES.has(page)) {
+  //   const pageFlag = await runFlag(
+  //     `${page}_page_enabled`,
+  //     {
+  //       userRole: role,
+  //       userId
+  //     },
+  //     supabase
+  //   );
 
-  if (role === "admin") {
-    return NextResponse.next();
-  }
+  //   if (pageFlag.exists && !pageFlag.enabled) {
+  //     return mwRedirect(request, "/disabled", {
+  //       page: originalPath,
+  //       reason: "feature_disabled"
+  //     });
+  //   }
+  // }
 
-  if (adminOnlyRoutes.includes(nextUrl.pathname)) {
-    nextUrl.searchParams.set("page", nextUrl.pathname);
-    nextUrl.pathname = "/auth/unauthorized";
+  // const requiredPermission = ROUTE_PERMISSIONS[page];
 
-    return NextResponse.redirect(nextUrl);
-  }
+  // if (requiredPermission && !hasPermission(role, requiredPermission)) {
+  //   return mwRedirect(request, "/unauthorized", { page: originalPath });
+  // }
 
-  return NextResponse.next();
+  // return response;
+
+  const response = NextResponse.next({ request });
+
+  const supabase = getSBServerClient(response.cookies);
+
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims;
+
+  // // Later, replace "true" with a flag check to see if they can view page.
+  // if (!user && !request.nextUrl.pathname.startsWith("/auth")) {
+  //   return mwRedirect(response, request.nextUrl.clone(), "/auth/login", {
+  //     next: request.nextUrl.pathname
+  //   });
+  // }
+
+  return response;
 }
+
+function mwRedirect(
+  response: NextResponse,
+  url: URL,
+  pathname: string,
+  params: Record<string, string>
+) {
+  if (pathname === url.pathname) {
+    return response;
+  }
+
+  const searchParams = new URLSearchParams(params);
+  const redirectUrl = new URL(pathname, url);
+  redirectUrl.search = searchParams.toString();
+
+  return NextResponse.redirect(redirectUrl);
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * Feel free to modify this pattern to include more paths.
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"
+  ]
+};

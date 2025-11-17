@@ -31,8 +31,6 @@ export const FullMonths = {
   December: 12
 };
 
-
-
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -82,4 +80,10 @@ export function getBadgeStatusStyles(
   }
 
   return className;
+}
+
+type SearchParams = Record<string, string>;
+export function getSearchParamsString(params: SearchParams, basePath = "") {
+  const searchParams = new URLSearchParams(params);
+  return `${basePath}?${searchParams.toString()}`;
 }

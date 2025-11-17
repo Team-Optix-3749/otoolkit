@@ -3,10 +3,10 @@
 import { useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useIsHydrated } from "@/hooks/useIsHydrated";
+import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
 import { loginOAuth, signupEmailPass } from "@/lib/auth";
-import { BaseStates, SignupStates } from "@/lib/states";
+import { BaseStates, SignupStates } from "@/lib/types/states";
 import { logger } from "@/lib/logger";
 
 import Image from "next/image";
@@ -28,7 +28,7 @@ export default function SignupForm() {
   const { doMinimalRendering, setDefaultExpanded } = useNavbar();
 
   const router = useRouter();
-  const isHydrated = useIsHydrated();
+  const isHydrated = useIsMounted();
 
   const redirectToHome = useCallback(() => {
     router.prefetch("/");

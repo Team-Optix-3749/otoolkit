@@ -1,11 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { createSessionsBulk, updateEvent } from "@/lib/db/outreach";
 import { listAllUsers } from "@/lib/db/user";
 import { formatMinutes, cn } from "@/lib/utils";
-import type { OutreachEvent, User } from "@/lib/types/pocketbase";
+import type { OutreachEvent, User } from "@/lib/types/supabase";
 import { logger } from "@/lib/logger";
-import { ErrorToString } from "@/lib/states";
+import { ErrorToString } from "@/lib/types/states";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,6 @@ import {
   Save,
   Calendar
 } from "lucide-react";
-import { PBBrowser } from "@/lib/pb";
 
 interface LogHoursDialogProps {
   event: OutreachEvent;
@@ -71,6 +71,7 @@ export default function LogHoursDialog({
   const [fetchingUsers, setFetchingUsers] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [eventName, setEventName] = useState(event.name);
@@ -102,21 +103,14 @@ export default function LogHoursDialog({
     }
   }, [eventName, eventDate, open, event.name, event.date]);
 
-  // Fetch users when dialog opens
-  useEffect(() => {
-    if (!users.length && open) {
-      fetchUsers();
-    }
-  }, [users.length, open]);
-
-  async function fetchUsers() {
+  const fetchUsers = useCallback(async () => {
     setFetchingUsers(true);
     try {
-      const [error, allUsers] = await listAllUsers(PBBrowser.getInstance());
+      const [error, allUsers] = await listAllUsers(supabase);
 
       if (error || !allUsers) {
         throw new Error(
-          error ? ErrorToString[error] ?? "PocketBase error" : "No users"
+          error ? ErrorToString[error] ?? "Supabase error" : "No users"
         );
       }
 
@@ -127,7 +121,14 @@ export default function LogHoursDialog({
     } finally {
       setFetchingUsers(false);
     }
-  }
+  }, [supabase]);
+
+  // Fetch users when dialog opens
+  useEffect(() => {
+    if (!users.length && open) {
+      void fetchUsers();
+    }
+  }, [fetchUsers, open, users.length]);
 
   const addNewSubmission = () =>
     setSubmissions((prev) => [
@@ -188,7 +189,7 @@ export default function LogHoursDialog({
           eventId: event.id,
           minutes: s.minutes
         })),
-        PBBrowser.getInstance()
+        supabase
       );
 
       if (error) {
@@ -243,7 +244,7 @@ export default function LogHoursDialog({
           name: eventName,
           date: eventDate
         },
-        PBBrowser.getInstance()
+        supabase
       );
 
       if (error) {

@@ -26,5 +26,5 @@ export default function ServerToaster({
     });
   }, [message, type, duration]);
 
-  return <div className="absolute -top-20 -left-20 w-0 h-0 -z-10"></div>;
+  return null;
 }

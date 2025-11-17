@@ -4,14 +4,18 @@ yes this is chatgpted
 
 Our comprehensive solution for tracking everything!
 
-1. **Outreach Tracking** - Log and track team member outreach hours, with approval workflows for mentors
-2. **Scouting** - Collect data on other teams' robot performance during competitions to help with alliance selection
-3. **More Coming Soon!** - Plans for tool management 
+1. **Outreach Tracking** - Log and track team member outreach hours, with
+   approval workflows for mentors
+2. **Scouting** - Collect data on other teams' robot performance during
+   competitions to help with alliance selection
+3. **More Coming Soon!** - Plans for tool management
 
 ## Features
 
-- 📊 **Outreach Management**: Track member hours, event participation, and generate reports
-- 🤖 **Robot Scouting**: Customizable forms to collect match and pit scouting data
+- 📊 **Outreach Management**: Track member hours, event participation, and
+  generate reports
+- 🤖 **Robot Scouting**: Customizable forms to collect match and pit scouting
+  data
 - 📱 **Mobile Friendly**: Works well on phones and tablets for pit scouting
 - 📈 **Data Visualization**: Charts and graphs for analyzing team performance
 
@@ -27,32 +31,47 @@ Our comprehensive solution for tracking everything!
 ### Prerequisites
 
 - Bun (recommended) or npm
-- Pocketbase
+- PocketBase
+- Supabase local stack (for migration testing)
 
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/your-username/optix-toolkit.git
    cd optix-toolkit
    ```
 
 2. **Install dependencies**
+
    ```bash
    bun install
    # or npm install
    ```
 
 3. **Set up environment variables**
-   
+
    Create a `.env.local` file in the root directory:
+
    ```env
+   # PocketBase (legacy backend)
    NEXT_PUBLIC_PB_URL=http://localhost:30090
+
+   # Supabase (in-progress migration)
+   SUPABASE_URL=http://localhost:8000
+   SUPABASE_ANON_KEY=your-local-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-local-service-role-key
    ```
 
+   The repository bundles a self-hosted Supabase stack under `otoolkit-sb/`;
+   copy the development keys from `otoolkit-sb/.env` when running everything
+   locally.
+
 4. **Start PocketBase**
-   
+
    Navigate to the PocketBase directory and start the server:
+
    ```bash
    cd otoolkit-pb
    # On Windows with WSL:
@@ -60,15 +79,20 @@ Our comprehensive solution for tracking everything!
    # Or manually:
    ./pocketbase serve --dir=. --dev
    ```
-   
+
    PocketBase will run on `http://localhost:30090`
 
+   > **Note**: Supabase development services are expected to run on
+   > `http://localhost:8000`. Start them via `supabase start` (or the provided
+   > docker-compose configuration) once the migration reaches Phase 2.
+
 5. **Start the development server**
+
    ```bash
    bun run dev
    # or npm run dev
    ```
-   
+
    The app will be available at `http://localhost:3000`
 
 ### First Time Setup
@@ -117,7 +141,7 @@ wsl ./LocalStart.sh
 
 ## Contributing
 
-We welcome contributions from other FRC teams and developers! 
+We welcome contributions from other FRC teams and developers!
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feat/new-feature`)
@@ -129,17 +153,21 @@ Please follow TypeScript best practices and ensure your code passes linting.
 
 ## License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE)
+file for details.
 
 ### Attribution Required
 
 If you use this software, please provide attribution by mentioning:
+
 - "Optix Toolkit by FRC Team Optix 3749"
 - Include a link back to this repository
 
 ## About Team Optix 3749
 
-We are a FIRST Robotics Competition team from Del Norte High School in San Diego, California. This toolkit was built by our students and mentors to help streamline team operations and improve our competitive performance.
+We are a FIRST Robotics Competition team from Del Norte High School in San
+Diego, California. This toolkit was built by our students and mentors to help
+streamline team operations and improve our competitive performance.
 
 ## Credits
 
@@ -148,4 +176,5 @@ We are a FIRST Robotics Competition team from Del Norte High School in San Diego
 
 ---
 
-**Questions or Issues?** Open an issue on GitHub or contact our team through our website.
+**Questions or Issues?** Open an issue on GitHub or contact our team through our
+website.

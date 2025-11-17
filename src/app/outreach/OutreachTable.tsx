@@ -2,8 +2,7 @@
 
 // React
 import { useEffect, useState } from "react";
-import { recordToImageUrl } from "@/lib/pb";
-import type { UserData } from "@/lib/types/pocketbase";
+import type { UserData } from "@/lib/types/models";
 import { formatMinutes, formatPbDate, getBadgeStatusStyles } from "@/lib/utils";
 // UI
 import {
@@ -20,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import EditUserDialog from "./EditUserDialog";
+import ManageEventsSheet from "@/app/outreach/manage/ManageEventsSheet";
 
 type OutreachTableProps = {
   allUsers: UserData[];
@@ -92,8 +92,12 @@ export function OutreachTable({
             bValue = b.outreachMinutes || 0;
             break;
           case "lastOutreachEvent":
-            aValue = new Date(a.lastOutreachEvent).getTime();
-            bValue = new Date(b.lastOutreachEvent).getTime();
+            aValue = a.lastOutreachEvent
+              ? new Date(a.lastOutreachEvent).getTime()
+              : 0;
+            bValue = b.lastOutreachEvent
+              ? new Date(b.lastOutreachEvent).getTime()
+              : 0;
             break;
           default:
             return 0;
@@ -116,6 +120,11 @@ export function OutreachTable({
     return (
       <div className="w-full">
         <div className="space-y-3">
+          {canManage && (
+            <div className="flex justify-end">
+              <ManageEventsSheet onClose={refetchData} />
+            </div>
+          )}
           {/* Sort Controls for Mobile */}
           <div className="flex gap-2 p-2 bg-muted/50 rounded-lg">
             <Button
@@ -194,14 +203,12 @@ export function OutreachTable({
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <Avatar className="h-10 w-10 flex-shrink-0">
                         <AvatarImage
-                          src={recordToImageUrl(
-                            userData.expand?.user
-                          )?.toString()}
-                          alt={userData.expand?.user.name}
+                          src={userData.expand?.user?.avatar ?? undefined}
+                          alt={userData.expand?.user?.name}
                           className="rounded-full"
                         />
                         <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
-                          {userData.expand?.user.name.charAt(0) || "?"}
+                          {userData.expand?.user?.name?.charAt(0) || "?"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
@@ -212,7 +219,8 @@ export function OutreachTable({
                           {userData.expand?.user?.email}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {formatPbDate(userData.lastOutreachEvent) || "N/A"}
+                          {formatPbDate(userData.lastOutreachEvent ?? "") ||
+                            "N/A"}
                         </div>
                       </div>
                     </div>
@@ -321,14 +329,12 @@ export function OutreachTable({
                   <div className="flex items-center gap-2 min-w-0">
                     <Avatar>
                       <AvatarImage
-                        src={recordToImageUrl(
-                          userData.expand?.user
-                        )?.toString()}
-                        alt={userData.expand?.user.name}
+                        src={userData.expand?.user?.avatar ?? undefined}
+                        alt={userData.expand?.user?.name}
                         className="rounded-full"
                       />
                       <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
-                        {userData.expand?.user.name.charAt(0) || "?"}
+                        {userData.expand?.user?.name?.charAt(0) || "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
@@ -352,7 +358,7 @@ export function OutreachTable({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {formatPbDate(userData.lastOutreachEvent) || "N/A"}
+                  {formatPbDate(userData.lastOutreachEvent ?? "") || "N/A"}
                 </TableCell>
                 {canManage && (
                   <TableCell>

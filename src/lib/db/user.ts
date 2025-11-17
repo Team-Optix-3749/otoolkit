@@ -1,86 +1,184 @@
-import { Dispatch, SetStateAction } from "react";
-import type { ListResult, OnStoreChangeFunc } from "pocketbase";
+import type { SupabaseClient, PostgrestError } from "@supabase/supabase-js";
 
-import type { User, UserData } from "@/lib/types/pocketbase";
-import { clearPBAuthCookie } from "../pbServerUtils";
-import { PBClientBase } from "../pb";
-import { ErrorCodes } from "../states";
+import type { Database } from "../sbClient";
+import { mapProfileToUser, mapUserOutreachStats } from "../supabase/mappers";
+import type { User, UserData } from "../types/models";
+import { ErrorCodes } from "../types/states";
 import { logger } from "../logger";
 
-export async function newUser(
-  email: string,
-  password: string,
-  name: string,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, User]> {
-  const [lookupError, existingUser] = await client.getFirstListItem<User>(
-    "users",
-    `email="${email.replace(/"/g, '\\"')}"`
-  );
-  if (existingUser) return ["01x03", null];
-  if (lookupError && lookupError !== "01x404") return [lookupError, null];
+type TypedClient = SupabaseClient<Database>;
+type OutreachStatsRow =
+  Database["public"]["Views"]["user_outreach_stats"]["Row"];
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
-  return createUser(email, password, name, client);
-}
+type PaginatedResult<T> = {
+  items: T[];
+  page: number;
+  perPage: number;
+  totalItems: number;
+  totalPages: number;
+};
 
-export async function createUser(
-  email: string,
-  password: string,
-  name: string,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, User]> {
-  const result = await client.createOne<User>("users", {
-    email,
-    password,
-    passwordConfirm: password,
-    emailVisibility: true,
-    name,
-    role: "member"
-  });
+function mapPostgrestError(error?: PostgrestError | null): ErrorCodes {
+  if (!error) return "01x01";
 
-  const [, createdUser] = result;
-  if (createdUser) {
-    logger.info({ userId: createdUser.id, email }, "Created new user");
+  switch (error.code) {
+    case "PGRST116":
+      return "01x404";
+    case "42501":
+      return "01x403";
+    case "23514":
+    case "22P02":
+    case "PGRST102":
+    case "PGRST100":
+      return "01x400";
+    default:
+      break;
   }
 
-  return result;
+  if (typeof error.details === "string") {
+    if (error.details.includes("not found")) return "01x404";
+    if (error.details.includes("permission")) return "01x403";
+  }
+
+  return "01x01";
 }
 
-export function registerAuthCallback(
-  cb: OnStoreChangeFunc,
-  client: PBClientBase
-) {
-  client.authStore.onChange(cb, true);
+function toErrorTuple(error?: PostgrestError | null): [ErrorCodes, null] {
+  return [mapPostgrestError(error), null];
 }
 
 export async function listUserData(
   page: number,
   perPage: number,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, ListResult<UserData>]> {
-  return client.getList<UserData>("UserData", page, perPage, {
-    expand: "user"
-  });
+  client: TypedClient
+): Promise<[ErrorCodes, null] | [null, PaginatedResult<UserData>]> {
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+
+  const { data, error, count } = await client
+    .from("user_outreach_stats")
+    .select("*", { count: "exact" })
+    .range(from, to)
+    .order("outreach_minutes", { ascending: false });
+
+  if (error) {
+    logger.error(
+      { err: error.message, page, perPage },
+      "Failed to list user outreach stats"
+    );
+    return toErrorTuple(error);
+  }
+
+  const rows = (data ?? []) as unknown as OutreachStatsRow[];
+  const ids = rows.map((row) => row.user_id);
+
+  const profilesMap = new Map<string, ProfileRow>();
+
+  if (ids.length) {
+    const { data: profiles, error: profileError } = await client
+      .from("profiles")
+      .select("*")
+      .in("id", ids);
+
+    if (profileError) {
+      logger.error(
+        { err: profileError.message },
+        "Failed to fetch profiles for outreach stats"
+      );
+      return toErrorTuple(profileError);
+    }
+
+    for (const profile of (profiles ?? []) as unknown as ProfileRow[]) {
+      profilesMap.set(profile.id, profile);
+    }
+  }
+
+  const items = rows.map((row) =>
+    mapUserOutreachStats(row, profilesMap.get(row.user_id))
+  );
+
+  const totalItems = count ?? items.length;
+  const totalPages = perPage > 0 ? Math.ceil(totalItems / perPage) : 1;
+
+  return [
+    null,
+    {
+      items,
+      page,
+      perPage,
+      totalItems,
+      totalPages
+    }
+  ];
 }
 
 export async function listAllUsers(
-  client: PBClientBase
+  client: TypedClient
 ): Promise<[ErrorCodes, null] | [null, User[]]> {
-  return client.getFullList<User>("users", undefined, { sort: "name" });
+  const { data, error } = await client
+    .from("profiles")
+    .select("*")
+    .order("full_name", { ascending: true });
+
+  if (error) {
+    logger.error({ err: error.message }, "Failed to list profiles");
+    return toErrorTuple(error);
+  }
+
+  return [
+    null,
+    ((data ?? []) as unknown as ProfileRow[]).map((profile) =>
+      mapProfileToUser(profile)
+    )
+  ];
 }
 
 export async function getUserData(
   userId: string,
-  client: PBClientBase
+  client: TypedClient
 ): Promise<[ErrorCodes, null] | [null, UserData]> {
-  const [error, data] = await client.getFirstListItem<UserData>(
-    "UserData",
-    `user='${userId.replace(/'/g, "\\'")}'`,
-    { expand: "user" }
-  );
+  const { data, error } = await client
+    .from("user_outreach_stats")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
   if (error) {
-    return [error, null];
+    if (error.code === "PGRST116") {
+      return ["01x404", null];
+    }
+
+    logger.error(
+      { err: error.message, userId },
+      "Failed to fetch outreach stats"
+    );
+    return toErrorTuple(error);
   }
 
-  return [null, data];
+  if (!data) {
+    return ["01x404", null];
+  }
+
+  const { data: profile, error: profileError } = await client
+    .from("profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError && profileError.code !== "PGRST116") {
+    logger.error(
+      { err: profileError.message, userId },
+      "Failed to fetch profile"
+    );
+    return toErrorTuple(profileError);
+  }
+
+  return [
+    null,
+    mapUserOutreachStats(
+      data as unknown as OutreachStatsRow,
+      profile as unknown as ProfileRow | null | undefined
+    )
+  ];
 }

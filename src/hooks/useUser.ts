@@ -1,24 +1,22 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getSBBrowserClient } from "@/lib/sbClient";
 
-import { registerAuthCallback } from "@/lib/db/user";
-import type { User } from "@/lib/types/pocketbase";
-import { PBBrowser } from "@/lib/pb";
-import { OnStoreChangeFunc } from "pocketbase";
+import { User } from "@/lib/types/supabase";
 
 export function useUser() {
-  const pb = PBBrowser.getInstance();
+  const supabase = useMemo(() => getSBBrowserClient(), []);
   const [user, setUser] = useState<User | null>(null);
 
-  const callback: OnStoreChangeFunc = useCallback(
-    (token, record) => {
-      setUser(record as User | null);
-    },
-    [pb]
-  );
-
   useEffect(() => {
-    return registerAuthCallback(callback, pb);
-  }, [pb, callback]);
+    (async () => {
+      const userRes = await supabase.auth.getUser();
+      setUser(userRes.data.user);
 
-  return { user, setUser } as const;
+      supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user || null);
+      });
+    })();
+  }, [supabase, setUser]);
+
+  return { user } as const;
 }

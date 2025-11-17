@@ -1,5 +1,5 @@
 // React
-import { useState } from "react";
+import { useMemo, useState } from "react";
 // UI
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,8 +19,8 @@ import { toast } from "sonner";
 // Icons
 import { Plus } from "lucide-react";
 import { logger } from "@/lib/logger";
-import { ErrorToString } from "@/lib/states";
-import { PBBrowser } from "@/lib/pb";
+import { ErrorToString } from "@/lib/types/states";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 interface CreateEventDialogProps {
   onEventCreated: () => void;
@@ -35,6 +35,7 @@ export default function CreateEventDialog({
     name: "",
     date: ""
   });
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +51,7 @@ export default function CreateEventDialog({
           name: formData.name,
           date: formData.date
         },
-        PBBrowser.getInstance()
+        supabase
       );
 
       if (error || !created) {

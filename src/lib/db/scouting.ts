@@ -1,7 +1,5 @@
 import { Dexie, type EntityTable } from "dexie";
-import type { RecordModel } from "pocketbase";
-
-import { type PBClientBase } from "@/lib/pb";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   DexieScoutingSubmission,
@@ -9,8 +7,12 @@ import {
   ScoutingSubmission,
   SelectOption
 } from "../types/scouting";
-import { ErrorCodes } from "../states";
+import { ErrorCodes } from "../types/states";
 import { logger } from "../logger";
+import type { Database } from "../supabase/types";
+
+type ScoutingSettingRow =
+  Database["public"]["Tables"]["scouting_settings"]["Row"];
 
 export const dexie = new Dexie("ScoutingFormResponses") as Dexie & {
   responses: EntityTable<DexieScoutingSubmission, "id">;
@@ -45,63 +47,57 @@ export async function handleFormSubmission(submission: ScoutingSubmission) {
 }
 
 export async function getScoutingConfig(
-  client: PBClientBase
+  client: SupabaseClient<Database>
 ): Promise<[ErrorCodes, null] | [null, ScoutingQuestionConfig[]]> {
-  const [error, record] = await client.getFirstListItem<
-    RecordModel & { value?: ScoutingQuestionConfig[] }
-  >("ScoutingSettings", "key='ScoutingConfig'");
+  const { data, error } = await client
+    .from("scouting_settings" as const)
+    .select("value")
+    .eq("key", "ScoutingConfig")
+    .maybeSingle();
 
   if (error) {
     logger.error(
-      { key: "ScoutingConfig", code: error },
+      { key: "ScoutingConfig", err: error.message },
       "Failed to fetch scouting config"
     );
-    return [error, null];
+    return ["01x01", null];
   }
 
-  return [null, record.value || []];
+  const row = data as unknown as ScoutingSettingRow | null;
+
+  const config = (row?.value as unknown as ScoutingQuestionConfig[]) ?? [];
+
+  return [null, config.map((item) => ({ ...item }))];
 }
 
 export async function fetchTeamOptions(
-  client: PBClientBase
+  client: SupabaseClient<Database>
 ): Promise<[ErrorCodes, null] | [null, SelectOption[]]> {
-  const [error, record] = await client.getFirstListItem<
-    RecordModel & { value?: SelectOption[] }
-  >("ScoutingSettings", "key='sk_EventTeams'");
-
-  if (error) {
-    if (error === "01x404") {
-      return [null, []];
-    }
-
-    logger.error(
-      { key: "sk_EventTeams", code: error },
-      "Failed to fetch select options"
-    );
-    return [error, null];
-  }
-
-  return [null, (record?.value as SelectOption[]) ?? []];
+  return fetchSelectOptions("sk_EventTeams", client);
 }
 
 export async function fetchSelectOptions(
   key: string,
-  client: PBClientBase
+  client: SupabaseClient<Database>
 ): Promise<[ErrorCodes, null] | [null, SelectOption[]]> {
-  const [error, record] = await client.getFirstListItem<
-    RecordModel & { value?: SelectOption[] }
-  >("ScoutingSettings", `key='${key}'`);
+  const { data, error } = await client
+    .from("scouting_settings" as const)
+    .select("value")
+    .eq("key", key)
+    .maybeSingle();
 
   if (error) {
-    if (error === "01x404") {
+    if (error.code === "PGRST116") {
       return [null, []];
     }
 
-    logger.error({ key, code: error }, "Failed to fetch select options");
-    return [error, null];
+    logger.error({ key, err: error.message }, "Failed to fetch select options");
+    return ["01x01", null];
   }
 
-  return [null, (record?.value as SelectOption[]) ?? []];
+  const row = data as unknown as ScoutingSettingRow | null;
+
+  return [null, (row?.value as unknown as SelectOption[]) ?? []];
 }
 
 export async function getAllResponses() {

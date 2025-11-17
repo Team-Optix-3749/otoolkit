@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { useIsHydrated } from "@/hooks/useIsHydrated";
+import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
 import { loginEmailPass, loginOAuth } from "@/lib/auth";
-import { BaseStates, SimpleLoginStates } from "@/lib/states";
+import { BaseStates, SimpleLoginStates } from "@/lib/types/states";
 import { logger } from "@/lib/logger";
 
 import Image from "next/image";
@@ -28,7 +28,7 @@ export default function LoginForm() {
   const router = useRouter();
 
   const { doMinimalRendering, setDefaultExpanded } = useNavbar();
-  const isHydrated = useIsHydrated();
+  const isHydrated = useIsMounted();
 
   const searchParams = useSearchParams();
   const redirectRoute = useMemo(
@@ -38,7 +38,7 @@ export default function LoginForm() {
 
   const redirect = useCallback(() => {
     console.log("Redirecting to:", redirectRoute);
-    
+
     toast.dismiss();
     router.push(redirectRoute);
   }, [router, redirectRoute]);
@@ -88,41 +88,15 @@ export default function LoginForm() {
           logger.info({ email }, "Password login successful");
           redirect();
           break;
-        case SimpleLoginStates.ERR_EMAIL_NOT_PROVIDED:
-          toast.error("Email is required.", { id: "sLoader" });
-          break;
-        case SimpleLoginStates.ERR_PASSWORD_NOT_PROVIDED:
-          toast.error("Password is required.", { id: "sLoader" });
-          break;
-        case SimpleLoginStates.ERR_INVALID_EMAIL:
-          toast.error("Please enter a valid email address.", { id: "sLoader" });
-          break;
-        case SimpleLoginStates.ERR_PASSWORD_TOO_SHORT:
-          toast.error("Password must be at least 8 characters long.", {
-            id: "sLoader"
-          });
-          break;
-        case SimpleLoginStates.ERR_EMAIL_NOT_FOUND:
-          toast.error("Email not found. Please check your email.", {
-            id: "sLoader"
-          });
-          break;
-        case SimpleLoginStates.ERR_INCORRECT_PASSWORD:
-          toast.error("Incorrect password. Please try again.", {
-            id: "sLoader"
-          });
-          break;
         case SimpleLoginStates.ERR_USER_USES_OAUTH:
           toast.error(
             "Hmm... It looks like you signed up using OAuth. Please use Google or Discord to login."
           );
           break;
-        case SimpleLoginStates.ERR_UNKNOWN:
         default:
-          toast.error("Something went wrong. Please try again later.", {
+          toast.error(SimpleLoginStates.ERR_UNKNOWN, {
             id: "sLoader"
           });
-          logger.error({ email }, "Unknown login error");
           break;
       }
     },

@@ -1,14 +1,14 @@
 // React
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { toast } from "sonner";
-import { PBBrowser, recordToImageUrl } from "@/lib/pb";
-import { ErrorToString } from "@/lib/states";
+import { ErrorToString } from "@/lib/types/states";
 import { formatMinutes } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { OutreachEvent, OutreachSession } from "@/lib/types/pocketbase";
+import type { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
 import { deleteSession } from "@/lib/db/outreach";
 import { logger } from "@/lib/logger";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,20 +28,23 @@ interface EventSessionsTableProps {
   event: OutreachEvent;
   sessions: OutreachSession[];
   onSessionDeleted: () => void;
+  compact?: boolean;
 }
 
 export default function EventSessionsTable({
   event,
   sessions,
-  onSessionDeleted
+  onSessionDeleted,
+  compact = false
 }: EventSessionsTableProps) {
   const isMobile = useIsMobile();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const handleDeleteSession = async (sessionId: string) => {
     setDeletingId(sessionId);
     try {
-      const [error] = await deleteSession(sessionId, PBBrowser.getInstance());
+      const [error] = await deleteSession(sessionId, supabase);
 
       if (error) {
         throw new Error(ErrorToString[error] ?? error);
@@ -73,10 +76,18 @@ export default function EventSessionsTable({
     );
   }
 
+  const containerClasses = compact
+    ? "flex flex-col gap-3 max-h-[60vh] overflow-y-auto"
+    : "flex flex-col gap-3 h-full overflow-scroll";
+
+  const tableWrapperClasses = compact
+    ? "border rounded-md overflow-x-hidden"
+    : "overflow-y-auto border rounded-md overflow-x-hidden";
+
   return (
-    <div className="flex flex-col gap-3 h-full overflow-scroll">
+    <div className={containerClasses}>
       <h4 className="font-semibold">Logged Hours</h4>
-      <div className="overflow-y-auto border rounded-md overflow-x-hidden">
+      <div className={tableWrapperClasses}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -95,7 +106,7 @@ export default function EventSessionsTable({
                   <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                       <AvatarImage
-                        src={recordToImageUrl(session.expand?.user)?.toString()}
+                        src={session.expand?.user?.avatar ?? undefined}
                       />
                       <AvatarFallback>
                         {session.expand?.user?.name?.charAt(0) || "?"}

@@ -6,10 +6,9 @@ import { useRouter } from "next/navigation";
 
 import { toast } from "sonner";
 import { useUser } from "@/hooks/useUser";
-import { useIsHydrated } from "@/hooks/useIsHydrated";
+import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavbar } from "@/hooks/useNavbar";
-import { recordToImageUrl } from "@/lib/pb";
 import { logout } from "@/lib/auth";
 
 import {
@@ -34,7 +33,8 @@ import {
 
 import NavbarSkeleton from "./skeletons/NavbarSkeleton";
 import { Separator } from "@/components/ui/separator";
-import { User } from "@/lib/types/pocketbase";
+import { User } from "@/lib/types/supabase";
+import { getProfileImageUrl } from "@/lib/sbClient";
 
 type NavItem = {
   showInMinimal?: boolean;
@@ -118,7 +118,7 @@ export default function Navbar({}) {
 
   const { isSmallScreen, hasTouch } = useIsMobile(true);
   const state = useNavbar();
-  const isHydrated = useIsHydrated();
+  const isHydrated = useIsMounted();
 
   const { user } = useUser();
 
@@ -199,17 +199,17 @@ function Mobile({
             <div className="flex items-center space-x-3 pb-4 border-b border-border">
               <Avatar className="h-12 w-12">
                 <AvatarImage
-                  src={recordToImageUrl(user)?.toString()}
-                  alt={user.name || "User"}
+                  src={getProfileImageUrl(user)}
+                  alt={user.user_metadata?.name || "User"}
                   className="rounded-full"
                 />
                 <AvatarFallback className="bg-muted text-muted-foreground text-base rounded-full flex items-center justify-center h-full w-full">
-                  {(user.name || "U").charAt(0)}
+                  {(user.user_metadata?.name || "U").charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
                 <span className="text-base font-medium text-foreground">
-                  {user.name || "Unknown User"}
+                  {user.user_metadata?.name || "Unknown User"}
                 </span>
                 <span className="text-sm text-muted-foreground">
                   {user.role
@@ -400,7 +400,7 @@ function Desktop({
                   className="flex items-center space-x-3 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100 group">
                   <div className="hidden flex-col items-start md:flex">
                     <span className="text-sm font-medium text-foreground underline transition-all duration-200 ease-in-out decoration-transparent group-hover:decoration-current">
-                      {user.name || "Unknown User"}
+                      {user.user_metadata?.name || "Unknown User"}
                     </span>
                     <span className="text-sm font-sm text-muted-foreground">
                       {user.role
@@ -410,12 +410,12 @@ function Desktop({
                   </div>
                   <Avatar className="h-8 w-8">
                     <AvatarImage
-                      src={recordToImageUrl(user)?.toString()}
-                      alt={user.name || "User"}
+                      src={getProfileImageUrl(user)}
+                      alt={user.user_metadata?.name || "User"}
                       className="rounded-full"
                     />
                     <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
-                      {(user.name || "U").charAt(0)}
+                      {(user.user_metadata?.name || "U").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </Link>
