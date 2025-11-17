@@ -59,7 +59,8 @@ export async function listUserData(
   client: PBClientBase
 ): Promise<[ErrorCodes, null] | [null, ListResult<UserData>]> {
   return client.getList<UserData>("UserData", page, perPage, {
-    expand: "user"
+    expand: "user",
+    requestKey: null
   });
 }
 

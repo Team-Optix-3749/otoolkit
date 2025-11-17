@@ -20,10 +20,10 @@ if (!process.env.NEXT_PUBLIC_PB_URL) {
 export function getPBUrl(forceType?: "client" | "server") {
   const url = (() => {
     if (forceType === "server") {
-      return process.env.PRIVATE_PB_URL;
+      return process.env.PRIVATE_PB_URL!;
     }
     if (forceType === "client") {
-      return process.env.NEXT_PUBLIC_PB_URL;
+      return process.env.NEXT_PUBLIC_PB_URL!;
     }
 
     if (process.env.PRIVATE_PB_URL) return process.env.PRIVATE_PB_URL;
