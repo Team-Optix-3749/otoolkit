@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
 import { loginEmailPass, loginOAuth } from "@/lib/auth";
-import { BaseStates, SimpleLoginStates } from "@/lib/types/states";
+import { BaseStates, LoginStates } from "@/lib/types/states";
 import { logger } from "@/lib/logger";
 
 import Image from "next/image";
@@ -79,22 +79,22 @@ export default function LoginForm() {
       toast.dismiss();
       toast.loading("Logging In ...", { id: "sLoader" });
 
-      let state = SimpleLoginStates.ERR_UNKNOWN;
+      let state = LoginStates.ERR_UNKNOWN;
       state = await loginEmailPass(email, password);
 
       switch (state) {
-        case SimpleLoginStates.SUCCESS:
+        case LoginStates.SUCCESS:
           toast.success("Login successful!", { id: "sLoader" });
           logger.info({ email }, "Password login successful");
           redirect();
           break;
-        case SimpleLoginStates.ERR_USER_USES_OAUTH:
+        case LoginStates.ERR_USER_USES_OAUTH:
           toast.error(
             "Hmm... It looks like you signed up using OAuth. Please use Google or Discord to login."
           );
           break;
         default:
-          toast.error(SimpleLoginStates.ERR_UNKNOWN, {
+          toast.error(state, {
             id: "sLoader"
           });
           break;

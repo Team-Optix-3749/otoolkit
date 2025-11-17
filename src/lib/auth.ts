@@ -1,6 +1,7 @@
-import { BaseStates, SimpleLoginStates, SignupStates } from "./types/states";
+import { BaseStates, LoginStates, SignupStates } from "./types/states";
 import { logger } from "./logger";
 import { getSBBrowserClient } from "./sbClient";
+import { AuthApiError } from "@supabase/supabase-js";
 
 function validateEmail(value: string) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -8,38 +9,47 @@ function validateEmail(value: string) {
 }
 
 function validateName(value: string) {
-  const re = /^[A-Za-z0-9]+$/;
+  const re = /^[A-Za-z0-9\s]+$/;
   return re.test(String(value));
 }
 
 export async function loginEmailPass(
   email: string,
   password: string
-): Promise<SimpleLoginStates> {
-  if (!email) return SimpleLoginStates.ERR_EMAIL_NOT_PROVIDED;
-  if (!password) return SimpleLoginStates.ERR_PASSWORD_NOT_PROVIDED;
+): Promise<LoginStates> {
+  if (!email) return LoginStates.ERR_EMAIL_NOT_PROVIDED;
+  if (!password) return LoginStates.ERR_PASSWORD_NOT_PROVIDED;
 
   const trimmedEmail = email.trim();
   if (!validateEmail(trimmedEmail)) {
-    return SimpleLoginStates.ERR_INVALID_EMAIL;
+    return LoginStates.ERR_INVALID_EMAIL;
   }
 
   if (password.length < 8) {
-    return SimpleLoginStates.ERR_PASSWORD_TOO_SHORT;
+    return LoginStates.ERR_PASSWORD_TOO_SHORT;
   }
 
   const supabase = getSBBrowserClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const {
+    error
+  }: {
+    error: Partial<AuthApiError> | null;
+  } = await supabase.auth.signInWithPassword({
     email: trimmedEmail,
     password
   });
 
+  console.log({ error });
+
+  if (error?.code === "invalid_credentials")
+    return LoginStates.ERR_INCORRECT_PASSWORD;
+
   if (error) {
-    return SimpleLoginStates.ERR_INCORRECT_PASSWORD;
+    return LoginStates.ERR_UNKNOWN;
   }
 
-  return SimpleLoginStates.SUCCESS;
+  return LoginStates.SUCCESS;
 }
 
 export async function loginOAuth(provider: "google" | "discord") {
@@ -101,15 +111,13 @@ export async function signupEmailPass(
     password: password1,
     options: {
       data: {
-        full_name: trimmedName,
-        role: "member",
-        uses_oauth: false
+        name: trimmedName
       }
     }
   });
 
   if (error) {
-    if (error.message?.toLowerCase().includes("user already registered")) {
+    if (error.code === "user_already_exists") {
       return SignupStates.ERR_ALREADY_EXISTS;
     }
 
@@ -120,32 +128,8 @@ export async function signupEmailPass(
     return SignupStates.ERR_UNKNOWN;
   }
 
-  const user = data.user;
-
-  if (user) {
-    const { error: upsertError } = await supabase.from("profiles").upsert(
-      {
-        id: user.id,
-        email: trimmedEmail,
-        full_name: trimmedName,
-        role: "member",
-        uses_oauth: false
-      },
-      {
-        onConflict: "id"
-      }
-    );
-
-    if (upsertError) {
-      logger.error(
-        { err: upsertError.message },
-        "Failed to upsert profile during signup"
-      );
-    }
-  }
-
   const loginResult = await loginEmailPass(trimmedEmail, password1);
-  if (loginResult === SimpleLoginStates.SUCCESS) {
+  if (loginResult === LoginStates.SUCCESS) {
     return SignupStates.SUCCESS;
   }
 

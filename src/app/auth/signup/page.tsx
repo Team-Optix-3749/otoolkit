@@ -84,63 +84,14 @@ export default function SignupForm() {
 
       switch (state) {
         case SignupStates.SUCCESS:
-          toast.success("Account created successfully!", { id: "aLoader" });
-          logger.info({ email }, "User signup successful");
+          toast.success("Login successful!", { id: "sLoader" });
+          logger.info({ email }, "Password login successful");
           redirectToHome();
           break;
-        case SignupStates.ERR_EMAIL_NOT_PROVIDED:
-          toast.error("Email is required.", { id: "aLoader" });
-          break;
-        case SignupStates.ERR_PASSWORD_NOT_PROVIDED:
-          toast.error("Password is required.", { id: "aLoader" });
-          break;
-        case SignupStates.ERR_NAME_NOT_PROVIDED:
-          toast.error("Display name is required.", { id: "aLoader" });
-          break;
-        case SignupStates.ERR_INVALID_EMAIL:
-          toast.error("Please enter a valid email address.", { id: "aLoader" });
-          break;
-        case SignupStates.ERR_INVALID_NAME:
-          toast.error("Display name can only contain letters and numbers.", {
-            id: "aLoader"
-          });
-          break;
-        case SignupStates.ERR_NAME_TOO_SHORT:
-          toast.error("Display name must be at least 3 characters long.", {
-            id: "aLoader"
-          });
-          break;
-        case SignupStates.ERR_PASSWORD_TOO_SHORT:
-          toast.error("Password must be at least 8 characters long.", {
-            id: "aLoader"
-          });
-          break;
-        case SignupStates.ERR_PASSWORDS_DONT_MATCH:
-          toast.error("Passwords do not match.", { id: "aLoader" });
-          break;
-        case SignupStates.ERR_ALREADY_EXISTS:
-          toast.error("An account with this email already exists.", {
-            id: "aLoader"
-          });
-          toast.info(
-            "Looks like you have an account. Do you want to log in instead?",
-            {
-              duration: 10000,
-              action: {
-                label: "Take me there",
-                onClick: () => {
-                  router.push("/auth/login");
-                }
-              }
-            }
-          );
-          break;
-        case SignupStates.ERR_UNKNOWN:
         default:
-          toast.error("Something went wrong. Please try again later.", {
+          toast.error(state, {
             id: "aLoader"
           });
-          logger.error({ email }, "Unknown signup error");
           break;
       }
     },
