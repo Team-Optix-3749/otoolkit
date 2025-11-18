@@ -1,4 +1,4 @@
-import type { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
+import type { OutreachEvent, OutreachSession } from "@/lib/types/models";
 import { Calendar, Clock, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import LogHoursDialog from "./LogHoursDialog";
@@ -41,7 +41,9 @@ export default function EventDetails({
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  {new Date(selectedEvent.date).toLocaleDateString()}
+                  {selectedEvent.date
+                    ? new Date(selectedEvent.date).toLocaleDateString()
+                    : "N/A"}
                 </div>
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />

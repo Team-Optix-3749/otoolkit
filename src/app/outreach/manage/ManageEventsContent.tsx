@@ -4,11 +4,9 @@ import { useCallback, useMemo, useState } from "react";
 import useSWR from "swr";
 
 import { fetchEvents, fetchSessionsForEvent } from "@/lib/db/outreach";
-import { ErrorToString } from "@/lib/types/states";
-import type { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
+import type { OutreachEvent, OutreachSession } from "@/lib/types/models";
 
 import { useIsMobile } from "@/hooks/use-mobile";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import Loader from "@/components/Loader";
 import CreateEventDialog from "./CreateEventDialog";
@@ -26,21 +24,20 @@ export default function ManageEventsContent({
 }: ManageEventsContentProps) {
   const isMobile = useIsMobile();
   const isSheet = variant === "sheet";
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [selectedEvent, setSelectedEvent] = useState<OutreachEvent | null>(
     null
   );
 
   const eventsFetcher = useCallback(async (): Promise<OutreachEvent[]> => {
-    const [error, data] = await fetchEvents(supabase);
+    const [error, data] = await fetchEvents();
 
     if (error || !data) {
-      throw new Error(error);
+      throw new Error(error ?? "Failed to load events");
     }
 
     return data;
-  }, [supabase]);
+  }, []);
 
   const {
     data: events,
@@ -49,19 +46,16 @@ export default function ManageEventsContent({
   } = useSWR("outreach-events", eventsFetcher);
 
   const sessionsFetcher = useCallback(async (): Promise<OutreachSession[]> => {
-    if (!selectedEvent) return [];
+    if (!selectedEvent?.name) return [];
 
-    const [error, data] = await fetchSessionsForEvent(
-      selectedEvent.id,
-      supabase
-    );
+    const [error, data] = await fetchSessionsForEvent(selectedEvent.name);
 
     if (error || !data) {
-      throw new Error(error);
+      throw new Error(error ?? "Failed to load sessions");
     }
 
     return data;
-  }, [selectedEvent, supabase]);
+  }, [selectedEvent]);
 
   const { data: sessions, mutate: mutateSessions } = useSWR(
     selectedEvent ? `outreach-sessions-${selectedEvent.id}` : null,

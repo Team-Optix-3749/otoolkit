@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { logger } from "@/lib/logger";
 import type { FeatureFlag, FlagNames } from "@/lib/types/flags";
-import type { FeatureFlagModel, User } from "@/lib/types/supabase";
-import { createSupabaseServerActionClient } from "@/lib/supabase/server";
+import type { FeatureFlag as FeatureFlagModel } from "@/lib/types/supabase";
+import type { User } from "@/lib/types/models";
 import { mapProfileToUser } from "@/lib/supabase/mappers";
 
 import {
@@ -13,6 +13,7 @@ import {
   updateFlagPayloadSchema,
   type UpdateFlagPayload
 } from "./flag-schemas";
+import { getSBBrowserClient } from "@/lib/supabase/sbClient";
 
 export type FlagRecord = {
   id: string;
@@ -45,7 +46,7 @@ export async function updateFlagAction(
 
   const data: UpdateFlagPayload = parsed.data;
 
-  const supabase = createSupabaseServerActionClient();
+  const supabase = getSBBrowserClient();
   const {
     data: { user: authUser }
   } = await supabase.auth.getUser();
@@ -53,7 +54,10 @@ export async function updateFlagAction(
   let currentUser: User | null = null;
 
   if (authUser) {
-    const { data: profileRow } = await supabase
+    // profiles isn't included in the typed supabase DB map, use an
+    // untyped query and silence the explicit-any rule.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profileRow } = await (supabase as any)
       .from("profiles")
       .select("*")
       .eq("id", authUser.id)
@@ -72,12 +76,12 @@ export async function updateFlagAction(
   const normalizedFlag = normalizeFlag(data.flag);
 
   const { data: updated, error } = await supabase
-    .from("feature_flags")
+    .from("FeatureFlags")
     .update({
       name: data.name,
       flag: normalizedFlag
     })
-    .eq("id", data.id)
+    .eq("id", Number(data.id))
     .select("*")
     .maybeSingle();
 
@@ -102,12 +106,17 @@ export async function updateFlagAction(
 }
 
 function mapModelToRecord(model: FeatureFlagModel): FlagRecord {
+  const row = model as unknown as {
+    id?: number;
+    name?: string | null;
+    flag?: unknown;
+  };
   return {
-    id: model.id,
-    name: model.name,
-    flag: model.flag,
-    created: model.created,
-    updated: model.updated
+    id: String(row.id ?? ""),
+    name: row.name ?? "",
+    flag: row.flag as unknown as FeatureFlag,
+    created: "",
+    updated: ""
   };
 }
 

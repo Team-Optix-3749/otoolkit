@@ -3,10 +3,8 @@ import { toast } from "sonner";
 import { createSessionsBulk, updateEvent } from "@/lib/db/outreach";
 import { listAllUsers } from "@/lib/db/user";
 import { formatMinutes, cn } from "@/lib/utils";
-import type { OutreachEvent, User } from "@/lib/types/supabase";
+import type { OutreachEvent, User } from "@/lib/types/models";
 import { logger } from "@/lib/logger";
-import { ErrorToString } from "@/lib/types/states";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,11 +69,11 @@ export default function LogHoursDialog({
   const [fetchingUsers, setFetchingUsers] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
-
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
-  const [eventName, setEventName] = useState(event.name);
-  const [eventDate, setEventDate] = useState(event.date.split(" ").at(0));
+  const [eventName, setEventName] = useState(event.name ?? "");
+  const [eventDate, setEventDate] = useState(
+    event.date ? event.date.split(" ").at(0) ?? "" : ""
+  );
 
   const [submissions, setSubmissions] = useState<UserSubmission[]>([
     {
@@ -88,8 +86,8 @@ export default function LogHoursDialog({
   // Reset editable event fields whenever dialog opens
   useEffect(() => {
     if (open) {
-      setEventName(event.name);
-      setEventDate(event.date.split(" ").at(0));
+      setEventName(event.name ?? "");
+      setEventDate(event.date ? event.date.split(" ").at(0) ?? "" : "");
     }
   }, [open, event.name, event.date]);
 
@@ -97,7 +95,7 @@ export default function LogHoursDialog({
     if (open) {
       let hasChanges = false;
       if (event.name !== eventName) hasChanges = true;
-      if (event.date.split(" ").at(0) !== eventDate) hasChanges = true;
+      if ((event.date ?? "").split(" ").at(0) !== eventDate) hasChanges = true;
 
       setIsSaveDisabled(!hasChanges);
     }
@@ -106,20 +104,21 @@ export default function LogHoursDialog({
   const fetchUsers = useCallback(async () => {
     setFetchingUsers(true);
     try {
-      const [error, allUsers] = await listAllUsers(supabase);
+      const [error, allUsers] = await listAllUsers();
 
       if (error || !allUsers) {
-        throw new Error(error);
+        throw new Error(error ?? "Failed to load users");
       }
 
       setUsers(allUsers);
-    } catch (error: any) {
-      logger.error({ err: error?.message }, "Error fetching users");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ err: message }, "Error fetching users");
       toast.error("Failed to load users");
     } finally {
       setFetchingUsers(false);
     }
-  }, [supabase]);
+  }, []);
 
   // Fetch users when dialog opens
   useEffect(() => {
@@ -184,14 +183,14 @@ export default function LogHoursDialog({
       const [error] = await createSessionsBulk(
         valid.map((s) => ({
           userId: s.userId,
-          eventId: event.id,
+          // DB schema uses OutreachSessions.event -> OutreachEvents.name
+          eventId: event.name ?? String(event.id),
           minutes: s.minutes
-        })),
-        supabase
+        }))
       );
 
       if (error) {
-        throw new Error(error);
+        throw new Error(error ?? "Failed to log hours");
       }
 
       logger.info({ eventId: event.id, count: valid.length }, "Hours logged");
@@ -212,11 +211,9 @@ export default function LogHoursDialog({
 
       setOpen(false);
       onHoursLogged();
-    } catch (error: any) {
-      logger.error(
-        { eventId: event.id, err: error?.message },
-        "Error logging hours"
-      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ eventId: event.id, err: message }, "Error logging hours");
       toast.error("Failed to log hours");
     } finally {
       setSubmitting(false);
@@ -229,33 +226,30 @@ export default function LogHoursDialog({
       return;
     }
 
-    if (eventName === event.name && eventDate === event.date.split(" ")[0]) {
+    if (
+      eventName === event.name &&
+      eventDate === (event.date ?? "").split(" ")[0]
+    ) {
       toast.message("No changes to save");
       return;
     }
 
     setSavingEvent(true);
     try {
-      const [error] = await updateEvent(
-        event.id,
-        {
-          name: eventName,
-          date: eventDate
-        },
-        supabase
-      );
+      const [error] = await updateEvent(event.id, {
+        name: eventName,
+        date: eventDate
+      });
 
       if (error) {
-        throw new Error(error);
+        throw new Error(error ?? "Failed to update event");
       }
       logger.info({ eventId: event.id }, "Event updated");
       toast.success("Event updated");
       onEventUpdated?.();
-    } catch (error: any) {
-      logger.error(
-        { eventId: event.id, err: error?.message },
-        "Error updating event"
-      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ eventId: event.id, err: message }, "Error updating event");
       toast.error("Failed to update event");
     } finally {
       setSavingEvent(false);

@@ -2,10 +2,9 @@
 import { useMemo, useState } from "react";
 
 import { toast } from "sonner";
-import { ErrorToString } from "@/lib/types/states";
 import { formatMinutes } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
+import type { OutreachEvent, OutreachSession } from "@/lib/types/models";
 import { deleteSession } from "@/lib/db/outreach";
 import { logger } from "@/lib/logger";
 
@@ -45,7 +44,7 @@ export default function EventSessionsTable({
       const [error] = await deleteSession(sessionId);
 
       if (error) {
-        throw new Error(error);
+        throw new Error(error ?? "Failed to delete session");
       }
 
       logger.warn(
@@ -54,9 +53,10 @@ export default function EventSessionsTable({
       );
       toast.success("Session deleted successfully");
       onSessionDeleted();
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       logger.error(
-        { sessionId, eventId: event.id, err: error?.message },
+        { sessionId, eventId: event.id, err: message },
         "Failed to delete session"
       );
       toast.error("Failed to delete session");

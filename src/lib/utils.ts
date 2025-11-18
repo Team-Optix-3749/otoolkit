@@ -87,3 +87,12 @@ export function getSearchParamsString(params: SearchParams, basePath = "") {
   const searchParams = new URLSearchParams(params);
   return `${basePath}?${searchParams.toString()}`;
 }
+export function assertEnv(name: string, env: Record<string, unknown>) {
+  const value = env[name] as string | undefined;
+
+  if (!value) {
+    throw new Error(`Missing ${name} environment variable.`);
+  }
+
+  return value;
+}

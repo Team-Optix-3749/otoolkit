@@ -1,16 +1,17 @@
 "use client";
 
 // React / Hooks
-import { useEffect, useCallback, Suspense } from "react";
+import { useEffect, useCallback, useMemo, Suspense } from "react";
 import useSWRInfinite from "swr/infinite";
 import Link from "next/link";
 import { listUserData } from "@/lib/db/user";
 import { useNavbar } from "@/hooks/useNavbar";
 import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useUser } from "@/hooks/useUser";
 import type { UserData, User } from "@/lib/types/models";
+import { hasPermission } from "@/lib/permissions";
 import { formatMinutes, getBadgeStatusStyles } from "@/lib/utils";
-import { ErrorToString } from "@/lib/types/states";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -43,7 +44,7 @@ const fetcher = async (url: string): Promise<PaginatedResponse> => {
   const [error, data] = await listUserData(pageNum, PAGE_SIZE);
 
   if (error) {
-    throw new Error(error);
+    throw new Error(error ?? "Failed to load outreach data");
   }
 
   return data as PaginatedResponse;
@@ -61,7 +62,7 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
   const { setDefaultExpanded, setMobileNavbarSide } = useNavbar();
   const isHydrated = useIsMounted();
   const isMobile = useIsMobile();
-
+  const { user: authUser } = useUser();
 
   const { data, error, size, setSize, isValidating, mutate } =
     useSWRInfinite<PaginatedResponse>(getKey, fetcher, {
@@ -70,6 +71,19 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
     });
 
   const allUsers = data ? data.flatMap((page) => page.items) : [];
+  const currentUserData = useMemo<UserData | null>(() => {
+    if (!allUsers.length) return null;
+    if (authUser) {
+      return (
+        allUsers.find((entry) => entry.userId === authUser.id) ?? allUsers[0]
+      );
+    }
+
+    return allUsers[0];
+  }, [allUsers, authUser]);
+  const currentUser: User | null = currentUserData?.expand?.user ?? null;
+  const activityUserId = currentUserData?.userId ?? authUser?.id ?? null;
+  const canManage = hasPermission(currentUser?.role ?? null, "outreach:manage");
   const totalItems = data?.[0]?.totalItems || 0;
   const hasMore = allUsers.length < totalItems;
   const isLoading = !data && !error;
@@ -172,7 +186,7 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {userData?.outreachMinutes ? (
+            {currentUserData?.outreachMinutes ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-muted-foreground">
@@ -183,7 +197,7 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
                     <div className="text-2xl md:text-3xl font-bold">
-                      {formatMinutes(userData.outreachMinutes)}
+                      {formatMinutes(currentUserData.outreachMinutes)}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       Total completed
@@ -191,11 +205,11 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                   </div>
                   <Badge
                     className={`${getBadgeStatusStyles(
-                      userData.outreachMinutes,
+                      currentUserData.outreachMinutes,
                       outreachMinutesCutoff,
                       outreachMinutesCutoff - 60 * 3
                     )} text-xs md:text-sm px-2 md:px-3 py-1`}>
-                    {userData.outreachMinutes >= outreachMinutesCutoff
+                    {currentUserData.outreachMinutes >= outreachMinutesCutoff
                       ? "Complete"
                       : "In Progress"}
                   </Badge>
@@ -207,7 +221,9 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                     <span>Progress</span>
                     <span>
                       {Math.round(
-                        (userData.outreachMinutes / outreachMinutesCutoff) * 100
+                        (currentUserData.outreachMinutes /
+                          outreachMinutesCutoff) *
+                          100
                       )}
                       %
                     </span>
@@ -218,16 +234,19 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                       style={{
                         width: `${Math.min(
                           100,
-                          (userData.outreachMinutes / outreachMinutesCutoff) *
+                          (currentUserData.outreachMinutes /
+                            outreachMinutesCutoff) *
                             100
                         )}%`
                       }}></div>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {userData.outreachMinutes < outreachMinutesCutoff && (
+                    {currentUserData.outreachMinutes <
+                      outreachMinutesCutoff && (
                       <>
                         {formatMinutes(
-                          outreachMinutesCutoff - userData.outreachMinutes
+                          outreachMinutesCutoff -
+                            currentUserData.outreachMinutes
                         )}{" "}
                         remaining
                       </>

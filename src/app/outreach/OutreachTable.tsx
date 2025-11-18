@@ -32,11 +32,21 @@ type OutreachTableProps = {
   refetchData?: () => void; // Function to refetch data after edits
 };
 
-const SortedTableHeads = [
+type SortKey = "user" | "outreachMinutes" | "lastOutreachEvent";
+
+type TableHeadConfig = {
+  key: SortKey;
+  name: string;
+  descending: string;
+  ascending: string;
+  noSort: string;
+  isSortable: boolean;
+};
+
+const SortedTableHeads: readonly TableHeadConfig[] = [
   {
     key: "user",
     name: "User",
-    info: "`(${allUsers.length})`",
     descending: "Z > A",
     ascending: "A > Z",
     noSort: "",
@@ -59,6 +69,12 @@ const SortedTableHeads = [
     isSortable: true
   }
 ];
+type SortDirection = "ascending" | "descending";
+
+type SortConfig = {
+  key: SortKey;
+  direction: SortDirection;
+};
 
 // Main OutreachTable component
 export function OutreachTable({
@@ -72,7 +88,7 @@ export function OutreachTable({
 }: OutreachTableProps) {
   const [sortedUsers, setSortedUsers] = useState(allUsers);
 
-  const [sortConfig, setSortConfig] = useState({
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "user",
     direction: "ascending"
   });
@@ -80,7 +96,8 @@ export function OutreachTable({
   useEffect(() => {
     const sortUsers = (users: UserData[], config: typeof sortConfig) => {
       return [...users].sort((a, b) => {
-        let aValue, bValue;
+        let aValue: string | number;
+        let bValue: string | number;
 
         switch (config.key) {
           case "user":
@@ -275,15 +292,18 @@ export function OutreachTable({
                       prev.key === head.key && prev.direction === "ascending"
                         ? "descending"
                         : "ascending";
-                    return { key: head.key, direction: newDirection } as any;
+                    return { key: head.key, direction: newDirection };
                   });
                 }}>
                 <div className="flex items-center justify-baseline gap-5">
                   <span>
-                    {head.name}{" "}
-                    <span className="text-muted-foreground">
-                      {eval(head.info || "")}
-                    </span>
+                    {head.name}
+                    {head.key === "user" && (
+                      <span className="text-muted-foreground">
+                        {" "}
+                        ({allUsers.length})
+                      </span>
+                    )}
                   </span>
                   <div className="w-20">
                     {sortConfig.key === head.key && (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getSBBrowserClient } from "@/lib/sbClient";
+import { getSBBrowserClient } from "@/lib/supabase/sbClient";
 
 import { User } from "@/lib/types/supabase";
 

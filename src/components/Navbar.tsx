@@ -34,7 +34,7 @@ import {
 import NavbarSkeleton from "./skeletons/NavbarSkeleton";
 import { Separator } from "@/components/ui/separator";
 import { User } from "@/lib/types/supabase";
-import { getProfileImageUrl } from "@/lib/sbClient";
+import { getProfileImageUrl } from "@/lib/supabase/sbClient";
 
 type NavItem = {
   showInMinimal?: boolean;

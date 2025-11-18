@@ -1,10 +1,7 @@
-import { useMemo } from "react";
 import { toast } from "sonner";
 import { deleteEvent } from "@/lib/db/outreach";
 
-import { ErrorToString } from "@/lib/types/states";
-import type { OutreachEvent } from "@/lib/types/supabase";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { OutreachEvent } from "@/lib/types/models";
 
 import { Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,14 +46,15 @@ export default function EventsList({
       const [error] = await deleteEvent(eventId);
 
       if (error) {
-        throw new Error(error);
+        throw new Error(error ?? "Failed to delete event");
       }
 
       logger.warn({ eventId }, "Event deleted via list");
       toast.success("Event deleted successfully");
       onEventDeleted();
-    } catch (error: any) {
-      logger.error({ eventId, err: error?.message }, "Failed to delete event");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ eventId, err: message }, "Failed to delete event");
       toast.error("Failed to delete event");
     }
   };
@@ -95,7 +93,9 @@ export default function EventsList({
                     <div>
                       <h3 className="font-semibold">{event.name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(event.date).toLocaleDateString()}
+                        {event.date
+                          ? new Date(event.date).toLocaleDateString()
+                          : "N/A"}
                       </p>
                     </div>
                     <div className="flex gap-2">

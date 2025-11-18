@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
@@ -30,11 +30,12 @@ export default function LoginForm() {
   const { doMinimalRendering, setDefaultExpanded } = useNavbar();
   const isHydrated = useIsMounted();
 
-  const searchParams = useSearchParams();
-  const redirectRoute = useMemo(
-    () => searchParams.get("redirect") || "/",
-    [searchParams]
-  );
+  const [redirectRoute, setRedirectRoute] = useState("/");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRedirectRoute(params.get("redirect") || "/");
+  }, []);
 
   const redirect = useCallback(() => {
     console.log("Redirecting to:", redirectRoute);

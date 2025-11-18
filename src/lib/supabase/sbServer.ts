@@ -1,11 +1,12 @@
 import { ResponseCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { createServerClient } from "@supabase/ssr";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+import { assertEnv } from "../utils";
 
 export const getSBServerClient = (cookieStore: ResponseCookies) => {
-  return createServerClient(supabaseUrl!, supabaseKey!, {
+  const url = assertEnv("NEXT_PUBLIC_SUPABASE_URL", process.env);
+  const anonKey = assertEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env);
+
+  return createServerClient(url, anonKey, {
     cookies: cookieStore
   });
 };

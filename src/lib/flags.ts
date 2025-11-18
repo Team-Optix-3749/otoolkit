@@ -2,28 +2,25 @@
 
 import murmur from "murmurhash";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
+import type { Database } from "@/lib/types/supabase";
+import { getSBServerClient } from "./supabase/sbServer";
 
-import { createSupabaseServerComponentClient } from "./supabase/server";
 import { EvalRet, FeatureFlag, FlagNames, FlagParams } from "./types/flags";
 
 type TypedClient = SupabaseClient<Database>;
-type FeatureFlagRow = Database["public"]["Tables"]["feature_flags"]["Row"];
+type FeatureFlagRow = Database["public"]["Tables"]["FeatureFlags"]["Row"];
 
 let FLAG_TTL_MS = 60000;
 
 const flagsCache: Record<string, { flag: FeatureFlag; storedAt: number }> = {};
-
-async function resolveClient(client?: TypedClient): Promise<TypedClient> {
-  if (client) return client;
-  return createSupabaseServerComponentClient();
-}
 
 export async function runFlag(
   flagName: FlagNames,
   params?: FlagParams,
   client?: TypedClient
 ): Promise<EvalRet> {
-  const supabase = await resolveClient(client);
+  const supabase = getSBServerClient(await cookies());
   const flag = await fetchFlag(flagName, supabase);
 
   if (flag === undefined) {
@@ -45,7 +42,7 @@ async function fetchFlag(
   }
 
   const { data, error } = await client
-    .from("feature_flags")
+    .from("FeatureFlags")
     .select("flag")
     .eq("name", flagName)
     .maybeSingle();

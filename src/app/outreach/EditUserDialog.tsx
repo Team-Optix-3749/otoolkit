@@ -4,7 +4,7 @@ import { formatMinutes } from "@/lib/utils";
 import { manualModifyOutreachHours } from "@/lib/db/hours";
 
 import { BaseStates } from "@/lib/types/states";
-import { UserData } from "@/lib/types/supabase";
+import type { UserData } from "@/lib/types/models";
 
 import { Button } from "@/components/ui/button";
 import { DialogHeader } from "@/components/ui/dialog";
@@ -17,7 +17,6 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Edit2, Minus, Plus } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function EditUserDialog({
   userData,
@@ -30,7 +29,7 @@ export default function EditUserDialog({
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"add" | "subtract">("add");
   const [adjustment, setAdjustment] = useState(0);
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+  const displayName = userData.expand?.user?.name ?? "This user";
 
   useEffect(() => {
     if (open) {
@@ -66,17 +65,14 @@ export default function EditUserDialog({
     }
 
     const state = await manualModifyOutreachHours(
-      userData.expand?.user.id || "",
-      signedAdjustment,
-      supabase
+      userData.userId,
+      signedAdjustment
     );
 
     switch (state) {
       case BaseStates.SUCCESS:
         toast.success(
-          `${userData.expand?.user.name} now has ${formatMinutes(
-            projectedTotal
-          )}`
+          `${displayName} now has ${formatMinutes(projectedTotal)}`
         );
         setOpen(false);
         refreshFunc?.();
@@ -84,7 +80,7 @@ export default function EditUserDialog({
 
       case BaseStates.ERROR:
       default:
-        toast.error(`Failed to update ${userData.expand?.user.name}'s hours`);
+        toast.error(`Failed to update ${displayName}'s hours`);
         break;
     }
 

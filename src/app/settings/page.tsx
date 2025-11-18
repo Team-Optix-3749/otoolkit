@@ -10,7 +10,8 @@ import {
 import FlagsTab from "./FlagsTab";
 import { createSupabaseServerComponentClient } from "@/lib/supabase/server";
 import { mapProfileToUser } from "@/lib/supabase/mappers";
-import type { FeatureFlagModel, User } from "@/lib/types/supabase";
+import type { FeatureFlag } from "@/lib/types/flags";
+import type { User } from "@/lib/types/models";
 import type { FlagRecord } from "./actions";
 
 export default async function SettingsPage() {
@@ -47,7 +48,7 @@ export default async function SettingsPage() {
         error?.message ?? "Unknown error"
       })`;
     } else {
-      flags = (rows as FeatureFlagModel[]).map(mapFeatureFlagModelToRecord);
+      flags = (rows as FeatureFlag[]).map(mapFeatureFlagModelToRecord);
     }
   }
   const displayName =
@@ -107,12 +108,19 @@ export default async function SettingsPage() {
   );
 }
 
-function mapFeatureFlagModelToRecord(model: FeatureFlagModel): FlagRecord {
+function mapFeatureFlagModelToRecord(model: FeatureFlag): FlagRecord {
+  const row = model as unknown as {
+    id?: number;
+    name?: string | null;
+    flag?: unknown;
+  };
   return {
-    id: model.id,
-    name: model.name,
-    flag: model.flag,
-    created: model.created,
-    updated: model.updated
+    id: String(row.id ?? ""),
+    name: row.name ?? "",
+    flag: row.flag as unknown as FeatureFlag,
+    // Supabase FeatureFlags doesn't include created/updated in the typed
+    // schema — provide empty strings for compatibility with the UI.
+    created: "",
+    updated: ""
   };
 }

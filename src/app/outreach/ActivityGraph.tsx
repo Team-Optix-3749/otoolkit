@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { fetchUserSessionEventDates } from "@/lib/db/outreach";
 import { ShortMonths } from "@/lib/utils";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 import { BarChart, Bar, XAxis, Cell } from "recharts";
 import {
@@ -46,7 +45,6 @@ export default function ActivityGraph({ id }: OutreachActivityGraphProps) {
     avgSessionsPerMonth: 0,
     peakMonth: ""
   });
-  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const processTimestamps = function (timestamps: string[]): ChartData {
     const data = { ...PRE_FORMATTED_DATA }; // copy to avoid mutation across calls
@@ -65,10 +63,7 @@ export default function ActivityGraph({ id }: OutreachActivityGraphProps) {
 
   useEffect(() => {
     (async () => {
-      const [error, timestamps] = await fetchUserSessionEventDates(
-        id,
-        supabase
-      );
+      const [error, timestamps] = await fetchUserSessionEventDates(id);
 
       if (error || !timestamps) {
         setChartData([]);
@@ -79,7 +74,7 @@ export default function ActivityGraph({ id }: OutreachActivityGraphProps) {
 
       setChartData(data);
     })();
-  }, [id, supabase]);
+  }, [id]);
 
   useEffect(() => {
     if (chartData.length) {

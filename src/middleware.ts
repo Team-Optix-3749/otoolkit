@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { hasPermission } from "./lib/permissions";
 import { runFlag } from "./lib/flags";
-import { getSBServerClient } from "./lib/sbServer";
+import { getSBServerClient } from "./lib/supabase/sbServer";
 
 const ROUTE_PERMISSIONS: Partial<
   Record<string, Parameters<typeof hasPermission>[1]>

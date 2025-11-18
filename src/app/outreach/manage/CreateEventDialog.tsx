@@ -1,5 +1,5 @@
 // React
-import { useMemo, useState } from "react";
+import { useState } from "react";
 // UI
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +49,7 @@ export default function CreateEventDialog({
       });
 
       if (error || !created) {
-        throw new Error(error);
+        throw new Error(error ?? "Failed to create event");
       }
 
       logger.info({ eventId: created.id }, "Event created via dialog");
@@ -57,8 +57,9 @@ export default function CreateEventDialog({
       setFormData({ name: "", date: "" });
       setOpen(false);
       onEventCreated();
-    } catch (error: any) {
-      logger.error({ err: error?.message }, "Error creating event");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ err: message }, "Error creating event");
       toast.error("Failed to create event");
     } finally {
       setLoading(false);
