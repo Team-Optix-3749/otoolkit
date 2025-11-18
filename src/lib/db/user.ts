@@ -1,7 +1,6 @@
 import type { PostgrestError, User } from "@supabase/supabase-js";
 
 import { getSBBrowserClient } from "../supabase/sbClient";
-import { mapProfileToUser } from "@/lib/supabase/mappers";
 import { logger } from "../logger";
 import { makeSBRequest } from "../supabase/supabase";
 import { UserData } from "../types/supabase";
@@ -13,26 +12,6 @@ type PaginatedResult<T> = {
   totalItems: number;
   totalPages: number;
 };
-
-function isMissingRelation(error: PostgrestError | null): boolean {
-  if (!error?.message) return false;
-  const message = error.message.toLowerCase();
-  return message.includes("relation") && message.includes("does not exist");
-}
-
-function mapToUserData(row: UserData, profile: User): UserData {
-  return {
-    id: "id" in row && row.id ? String(row.id) : row.user,
-    userId: row.user,
-    outreachMinutes: row.outreach_minutes ?? 0,
-    outreachEvents: row.outreach_events ?? 0,
-    lastOutreachEvent: null,
-    source,
-    expand: {
-      user: profile
-    }
-  };
-}
 
 async function selectUserDataRange(
   from: number,

@@ -1,44 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSBBrowserClient } from "../supabase/sbClient";
 import { makeSBRequest } from "../supabase/supabase";
-import { mapProfileToUser } from "@/lib/supabase/mappers";
-import { OutreachEvent } from "../types/supabase";
-
-type BrowserClient = SupabaseClient;
+import { OutreachEvent, OutreachSession } from "../types/supabase";
 
 type SessionInsert = {
   userId: string;
   eventId: string;
   minutes: number;
 };
-
-function mapEvent(row: OutreachEvent): OutreachEvent {
-  return {
-    id: String(row.id),
-    name: row.name,
-    date: row.date,
-    created: row.created_at
-  };
-}
-
-async function fetchProfiles(client: BrowserClient, ids: string[]) {
-  if (ids.length === 0)
-    return new Map<string, ReturnType<typeof mapProfileToUser>>();
-
-  const { data, error } = await client
-    .from("profiles")
-    .select("id, email, full_name, avatar_url, role, uses_oauth")
-    .in("id", ids);
-
-  if (error || !data) {
-    return new Map();
-  }
-
-  return data.reduce((map, row) => {
-    map.set(row.id, mapProfileToUser(row as ProfileRow));
-    return map;
-  }, new Map<string, ReturnType<typeof mapProfileToUser>>());
-}
 
 export async function fetchEvents(): Promise<
   [string | null, OutreachEvent[] | null]
@@ -51,7 +20,7 @@ export async function fetchEvents(): Promise<
     return [error?.message ?? "Failed to load events", null];
   }
 
-  return [null, data.map(mapEvent)];
+  return [null, data];
 }
 
 export async function createEvent(payload: {
@@ -75,14 +44,14 @@ export async function createEvent(payload: {
     return [error?.message ?? "Failed to create event", null];
   }
 
-  return [null, mapEvent(data as OutreachEventRow)];
+  return [null, data];
 }
 
 export async function updateEvent(
   eventId: string,
   updates: Partial<{ name: string; date: string }>
 ): Promise<[string | null]> {
-  const payload: Partial<OutreachEventRow> = {};
+  const payload: Partial<OutreachEvent> = {};
 
   if (updates.name !== undefined) {
     payload.name = updates.name;
@@ -121,30 +90,16 @@ export async function fetchSessionsForEvent(
   const { data, error } = await makeSBRequest(async (sb) =>
     sb
       .from("OutreachSessions")
-      .select("id, user, event, minutes, created_at, metadata")
+      .select("*")
       .eq("event", eventId)
       .order("created_at", { ascending: false })
   );
 
-  if (error || !data) {
+  if (error) {
     return [error?.message ?? "Failed to load sessions", null];
   }
 
-  const rows = data as unknown as OutreachSessionRow[];
-  const userIds = Array.from(new Set(rows.map((row) => row.user)));
-
-  const sessions: OutreachSession[] = rows.map((typedRow) => {
-    return {
-      id: String(typedRow.id),
-      minutes: typedRow.minutes ?? 0,
-      userId: typedRow.user,
-      eventId: typedRow.event,
-      created: typedRow.created_at,
-      metadata: null
-    };
-  });
-
-  return [null, sessions];
+  return [null, data];
 }
 
 export async function createSessionsBulk(
@@ -174,7 +129,6 @@ export async function createSessionsBulk(
 export async function deleteSession(
   sessionId: string
 ): Promise<[string | null]> {
-  const supabase = getBrowserClient();
   const { error } = await makeSBRequest(async (sb) =>
     sb.from("OutreachSessions").delete().eq("id", Number(sessionId))
   );
@@ -194,26 +148,19 @@ type OutreachSessionEventDateRow = {
 export async function fetchUserSessionEventDates(
   userId: string
 ): Promise<[string | null, string[] | null]> {
-  const supabase = getBrowserClient();
   const { data, error } = await makeSBRequest(async (sb) =>
     sb
       .from("OutreachSessions")
-      .select("created_at, event:OutreachEvents(date)")
+      .select("event:OutreachEvents(date)")
       .eq("user", userId)
-      .order("created_at", { ascending: false })
+      .order("event", { ascending: false })
   );
 
   if (error || !data) {
     return [error?.message ?? "Failed to load activity", null];
   }
 
-  const timestamps = data.map((row) => {
-    const typedRow = row as unknown as OutreachSessionEventDateRow;
-    const eventDate = typedRow.event?.date;
-    return eventDate ?? typedRow.created_at;
-  });
-
-  return [null, timestamps];
+  return [null, data.map((row) => row.event.date ?? "")];
 }
 
 const DEFAULT_MINUTES_CUTOFF = 900;
