@@ -4,7 +4,6 @@ import { formatMinutes } from "@/lib/utils";
 import { manualModifyOutreachHours } from "@/lib/db/hours";
 
 import { BaseStates } from "@/lib/types/states";
-import type { UserData } from "@/lib/types/models";
 
 import { Button } from "@/components/ui/button";
 import { DialogHeader } from "@/components/ui/dialog";
@@ -17,6 +16,8 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Edit2, Minus, Plus } from "lucide-react";
+import { UserData } from "@/lib/types/supabase";
+import { getUserWithId } from "@/lib/db/server";
 
 export default function EditUserDialog({
   userData,
@@ -29,12 +30,25 @@ export default function EditUserDialog({
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"add" | "subtract">("add");
   const [adjustment, setAdjustment] = useState(0);
-  const displayName = userData.expand?.user?.name ?? "This user";
+  const [displayName, setDisplayName] = useState("Unknown User");
 
   useEffect(() => {
     if (open) {
       setMode("add");
       setAdjustment(0);
+    }
+
+    if (!displayName || displayName === "Unknown User") {
+      (async () => {
+        const [error, user] = await getUserWithId(userData.user);
+
+        if (error || !user) {
+          setDisplayName("Unknown User");
+          return;
+        }
+
+        setDisplayName(user.user_metadata.full_name || "Unknown User");
+      })();
     }
   }, [open]);
 
@@ -45,7 +59,7 @@ export default function EditUserDialog({
 
   const projectedTotal = Math.max(
     0,
-    userData.outreachMinutes + signedAdjustment
+    (userData.outreach_minutes || 0) + signedAdjustment
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,7 +79,7 @@ export default function EditUserDialog({
     }
 
     const state = await manualModifyOutreachHours(
-      userData.userId,
+      userData.user,
       signedAdjustment
     );
 
@@ -115,7 +129,7 @@ export default function EditUserDialog({
             {/** display current user formatted hours */}
             <p className="text-xl">Current Logged Time:</p>
             <p className="g text-xl text-muted-foreground">
-              {formatMinutes(userData.outreachMinutes)}
+              {formatMinutes(userData.outreach_minutes || 0)}
             </p>
           </div>
 

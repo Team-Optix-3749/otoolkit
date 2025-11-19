@@ -128,10 +128,10 @@ export async function createSessionsBulk(
 }
 
 export async function deleteSession(
-  sessionId: string
+  sessionId: number
 ): Promise<[string | null]> {
   const { error } = await makeSBRequest(async (sb) =>
-    sb.from("OutreachSessions").delete().eq("id", Number(sessionId))
+    sb.from("OutreachSessions").delete().eq("id", sessionId)
   );
 
   if (error) {

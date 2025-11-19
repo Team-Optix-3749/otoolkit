@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { formatMinutes } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import type { OutreachEvent, OutreachSession } from "@/lib/types/models";
 import { deleteSession } from "@/lib/db/outreach";
 import { logger } from "@/lib/logger";
 
@@ -21,6 +20,8 @@ import {
 } from "@/components/ui/table";
 
 import { Clock, Trash2 } from "lucide-react";
+import { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
+import { UserInfo } from "../../../components/UserInfo";
 
 interface EventSessionsTableProps {
   event: OutreachEvent;
@@ -36,9 +37,9 @@ export default function EventSessionsTable({
   compact = false
 }: EventSessionsTableProps) {
   const isMobile = useIsMobile();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  const handleDeleteSession = async (sessionId: string) => {
+  const handleDeleteSession = async (sessionId: number) => {
     setDeletingId(sessionId);
     try {
       const [error] = await deleteSession(sessionId);
@@ -101,33 +102,16 @@ export default function EventSessionsTable({
             {sessions.map((session) => (
               <TableRow key={session.id}>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={session.expand?.user?.avatar ?? undefined}
-                      />
-                      <AvatarFallback>
-                        {session.expand?.user?.name?.charAt(0) || "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium">
-                        {session.expand?.user?.name}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {session.expand?.user?.email}
-                      </div>
-                    </div>
-                  </div>
+                  <UserInfo userId={session.user} />
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">
-                    {formatMinutes(session.minutes)}
+                    {formatMinutes(session.minutes || 0)}
                   </Badge>
                 </TableCell>
                 {!isMobile && (
                   <TableCell>
-                    {new Date(session.created).toLocaleDateString()}
+                    {new Date(session.created_at).toLocaleDateString()}
                   </TableCell>
                 )}
                 {!isMobile && (

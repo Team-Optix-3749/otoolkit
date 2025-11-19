@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getSBBrowserClient } from "@/lib/supabase/sbClient";
 
 import { User } from "@/lib/types/supabase";
 
 export function useUser() {
-  const supabase = useMemo(() => getSBBrowserClient(), []);
+  const supabase = getSBBrowserClient();
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {

@@ -2,7 +2,6 @@
 
 // React
 import { useEffect, useState } from "react";
-import type { UserData } from "@/lib/types/models";
 import { formatMinutes, formatPbDate, getBadgeStatusStyles } from "@/lib/utils";
 // UI
 import {
@@ -20,6 +19,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import EditUserDialog from "./EditUserDialog";
 import ManageEventsSheet from "@/app/outreach/manage/ManageEventsSheet";
+import { UserData } from "@/lib/types/supabase";
+import { UserInfo } from "../../components/UserInfo";
 
 type OutreachTableProps = {
   allUsers: UserData[];
@@ -94,27 +95,19 @@ export function OutreachTable({
   });
 
   useEffect(() => {
-    const sortUsers = (users: UserData[], config: typeof sortConfig) => {
-      return [...users].sort((a, b) => {
+    const sortUsers = async (users: UserData[], config: typeof sortConfig) => {
+        return [...users].sort((a, b) => {
         let aValue: string | number;
         let bValue: string | number;
 
         switch (config.key) {
           case "user":
-            aValue = a.expand?.user?.name || "";
-            bValue = b.expand?.user?.name || "";
+            aValue = a.user. || "";
+            bValue = b.user. || "";
             break;
           case "outreachMinutes":
-            aValue = a.outreachMinutes || 0;
-            bValue = b.outreachMinutes || 0;
-            break;
-          case "lastOutreachEvent":
-            aValue = a.lastOutreachEvent
-              ? new Date(a.lastOutreachEvent).getTime()
-              : 0;
-            bValue = b.lastOutreachEvent
-              ? new Date(b.lastOutreachEvent).getTime()
-              : 0;
+            aValue = a.outreach_minutes || 0;
+            bValue = b.outreach_minutes || 0;
             break;
           default:
             return 0;
@@ -218,28 +211,7 @@ export function OutreachTable({
                 <CardContent className="p-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <Avatar className="h-10 w-10 flex-shrink-0">
-                        <AvatarImage
-                          src={userData.expand?.user?.avatar ?? undefined}
-                          alt={userData.expand?.user?.name}
-                          className="rounded-full"
-                        />
-                        <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
-                          {userData.expand?.user?.name?.charAt(0) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate">
-                          {userData.expand?.user?.name || "Unknown"}
-                        </div>
-                        <div className="text-sm text-muted-foreground truncate">
-                          {userData.expand?.user?.email}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {formatPbDate(userData.lastOutreachEvent ?? "") ||
-                            "N/A"}
-                        </div>
-                      </div>
+                      <UserInfo userId={userData.user} />
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
                       <Badge
