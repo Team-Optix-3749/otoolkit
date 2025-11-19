@@ -4,12 +4,10 @@
 import { useEffect, useCallback, useMemo, Suspense } from "react";
 import useSWRInfinite from "swr/infinite";
 import Link from "next/link";
-import { listUserData } from "@/lib/db/user";
 import { useNavbar } from "@/hooks/useNavbar";
 import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUser } from "@/hooks/useUser";
-import type { UserData, User } from "@/lib/types/models";
 import { hasPermission } from "@/lib/permissions";
 import { formatMinutes, getBadgeStatusStyles } from "@/lib/utils";
 
@@ -23,6 +21,9 @@ import { OutreachTable } from "./OutreachTable";
 import ActivityGraph from "./ActivityGraph";
 
 import { Users, Clock, TrendingUp, Calendar } from "lucide-react";
+import { User, UserData } from "@/lib/types/supabase";
+import { fetchUserDataPaginated } from "@/lib/db/user";
+import { getProfileImageUrl } from "@/lib/supabase/sbClient";
 
 const PAGE_SIZE = 15;
 
@@ -41,10 +42,10 @@ type Props = {
 const fetcher = async (url: string): Promise<PaginatedResponse> => {
   const [, page] = url.split("?page=");
   const pageNum = parseInt(page) || 1;
-  const [error, data] = await listUserData(pageNum, PAGE_SIZE);
+  const data = await fetchUserDataPaginated(pageNum, PAGE_SIZE);
 
-  if (error) {
-    throw new Error(error ?? "Failed to load outreach data");
+  if (!data) {
+    throw new Error("Failed to load outreach data");
   }
 
   return data as PaginatedResponse;
@@ -75,14 +76,15 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
     if (!allUsers.length) return null;
     if (authUser) {
       return (
-        allUsers.find((entry) => entry.userId === authUser.id) ?? allUsers[0]
+        allUsers.find((entry) => entry.user === authUser.id) ?? allUsers[0]
       );
     }
 
     return allUsers[0];
   }, [allUsers, authUser]);
-  const currentUser: User | null = currentUserData?.expand?.user ?? null;
-  const activityUserId = currentUserData?.userId ?? authUser?.id ?? null;
+
+  const currentUser: User | null = authUser;
+  const activityUserId = authUser?.id ?? null;
   const canManage = hasPermission(currentUser?.role ?? null, "outreach:manage");
   const totalItems = data?.[0]?.totalItems || 0;
   const hasMore = allUsers.length < totalItems;
@@ -166,27 +168,29 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
               <div className="relative flex items-center justify-center">
                 <Avatar className="h-10 w-10 md:h-12 md:w-12 flex-shrink-0">
                   <AvatarImage
-                    src={currentUser?.avatar ?? undefined}
-                    alt={currentUser?.name ?? "User avatar"}
+                    src={getProfileImageUrl(currentUser) ?? undefined}
+                    alt={currentUser?.user_metadata?.full_name ?? "User avatar"}
                     className="rounded-full object-cover"
                   />
                   <AvatarFallback className="bg-gradient-to-br from-blue-800 to-purple-800 text-white text-sm font-semibold rounded-full flex items-center justify-center h-full w-full">
-                    {currentUser?.name?.charAt(0).toUpperCase() ?? "?"}
+                    {currentUser?.user_metadata?.full_name
+                      ?.charAt(0)
+                      .toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="font-semibold text-base md:text-lg truncate">
-                  {currentUser?.name || "Unknown User"}
+                  {currentUser?.user_metadata?.full_name || "Unknown User"}
                 </h3>
                 <p className="text-sm text-muted-foreground truncate">
-                  {currentUser?.email || "No email"}
+                  {currentUser?.email ?? "No email"}
                 </p>
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {currentUserData?.outreachMinutes ? (
+            {currentUserData?.outreach_minutes || 0 ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-muted-foreground">
@@ -197,7 +201,7 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
                     <div className="text-2xl md:text-3xl font-bold">
-                      {formatMinutes(currentUserData.outreachMinutes)}
+                      {formatMinutes(currentUserData?.outreach_minutes || 0)}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       Total completed
@@ -205,11 +209,12 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                   </div>
                   <Badge
                     className={`${getBadgeStatusStyles(
-                      currentUserData.outreachMinutes,
+                      currentUserData?.outreach_minutes || 0,
                       outreachMinutesCutoff,
                       outreachMinutesCutoff - 60 * 3
                     )} text-xs md:text-sm px-2 md:px-3 py-1`}>
-                    {currentUserData.outreachMinutes >= outreachMinutesCutoff
+                    {currentUserData?.outreach_minutes ||
+                    0 >= outreachMinutesCutoff
                       ? "Complete"
                       : "In Progress"}
                   </Badge>
@@ -221,9 +226,8 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                     <span>Progress</span>
                     <span>
                       {Math.round(
-                        (currentUserData.outreachMinutes /
-                          outreachMinutesCutoff) *
-                          100
+                        (currentUserData?.outreach_minutes ||
+                          0 / outreachMinutesCutoff) * 100
                       )}
                       %
                     </span>
@@ -234,23 +238,22 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                       style={{
                         width: `${Math.min(
                           100,
-                          (currentUserData.outreachMinutes /
-                            outreachMinutesCutoff) *
-                            100
+                          (currentUserData?.outreach_minutes ||
+                            0 / outreachMinutesCutoff) * 100
                         )}%`
                       }}></div>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {currentUserData.outreachMinutes <
-                      outreachMinutesCutoff && (
-                      <>
-                        {formatMinutes(
-                          outreachMinutesCutoff -
-                            currentUserData.outreachMinutes
-                        )}{" "}
-                        remaining
-                      </>
-                    )}
+                    {currentUserData?.outreach_minutes ||
+                      (0 < outreachMinutesCutoff && (
+                        <>
+                          {formatMinutes(
+                            outreachMinutesCutoff -
+                              (currentUserData?.outreach_minutes || 0)
+                          )}{" "}
+                          remaining
+                        </>
+                      ))}
                   </div>
                 </div>
               </div>

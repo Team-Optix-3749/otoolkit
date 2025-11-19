@@ -1,8 +1,6 @@
 import { toast } from "sonner";
 import { deleteEvent } from "@/lib/db/outreach";
 
-import type { OutreachEvent } from "@/lib/types/models";
-
 import { Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +9,7 @@ import LogHoursDialog from "./LogHoursDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { logger } from "@/lib/logger";
+import { OutreachEvent } from "@/lib/types/supabase";
 
 interface EventsListProps {
   events: OutreachEvent[] | undefined;
@@ -33,7 +32,7 @@ export default function EventsList({
 }: EventsListProps) {
   const isSheet = variant === "sheet";
 
-  const handleDeleteEvent = async (eventId: string) => {
+  const handleDeleteEvent = async (eventId: number) => {
     if (
       !confirm(
         "Are you sure you want to delete this event? This will also delete all associated sessions."

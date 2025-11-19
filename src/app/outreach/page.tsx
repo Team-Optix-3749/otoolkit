@@ -1,4 +1,4 @@
-import { getOutreachMinutesCutoff } from "@/lib/db/outreach.server";
+import { getOutreachMinutesCutoff } from "@/lib/db/outreach";
 
 import OutreachPage from "./OutreachPage";
 

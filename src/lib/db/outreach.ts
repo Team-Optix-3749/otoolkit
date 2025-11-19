@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSBBrowserClient } from "../supabase/sbClient";
 import { makeSBRequest } from "../supabase/supabase";
 import { OutreachEvent, OutreachSession } from "../types/supabase";
+import { cache } from "react";
 
 type SessionInsert = {
   userId: string;
@@ -48,7 +49,7 @@ export async function createEvent(payload: {
 }
 
 export async function updateEvent(
-  eventId: string,
+  eventId: number,
   updates: Partial<{ name: string; date: string }>
 ): Promise<[string | null]> {
   const payload: Partial<OutreachEvent> = {};
@@ -62,7 +63,7 @@ export async function updateEvent(
   }
 
   const { error } = await makeSBRequest(async (sb) =>
-    sb.from("OutreachEvents").update(payload).eq("id", Number(eventId))
+    sb.from("OutreachEvents").update(payload).eq("id", eventId)
   );
 
   if (error) {
@@ -72,9 +73,9 @@ export async function updateEvent(
   return [null];
 }
 
-export async function deleteEvent(eventId: string): Promise<[string | null]> {
+export async function deleteEvent(eventId: number): Promise<[string | null]> {
   const { error } = await makeSBRequest(async (sb) =>
-    sb.from("OutreachEvents").delete().eq("id", Number(eventId))
+    sb.from("OutreachEvents").delete().eq("id", eventId)
   );
 
   if (error) {
@@ -140,11 +141,6 @@ export async function deleteSession(
   return [null];
 }
 
-type OutreachSessionEventDateRow = {
-  created_at: string;
-  event: { date: string | null } | null;
-};
-
 export async function fetchUserSessionEventDates(
   userId: string
 ): Promise<[string | null, string[] | null]> {
@@ -164,7 +160,7 @@ export async function fetchUserSessionEventDates(
 }
 
 const DEFAULT_MINUTES_CUTOFF = 900;
-export async function getOutreachMinutesCutoff(): Promise<number> {
+export const getOutreachMinutesCutoff = cache(async (): Promise<number> => {
   const supabase = getSBBrowserClient();
 
   const { data, error } = await supabase
@@ -188,4 +184,4 @@ export async function getOutreachMinutesCutoff(): Promise<number> {
   }
 
   return DEFAULT_MINUTES_CUTOFF;
-}
+});

@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { createSessionsBulk, updateEvent } from "@/lib/db/outreach";
-import { listAllUsers } from "@/lib/db/user";
+import { getAllUsers } from "@/lib/db/server";
 import { formatMinutes, cn } from "@/lib/utils";
-import type { OutreachEvent, User } from "@/lib/types/models";
 import { logger } from "@/lib/logger";
 
 import { Button } from "@/components/ui/button";
@@ -43,6 +42,7 @@ import {
   Save,
   Calendar
 } from "lucide-react";
+import { OutreachEvent, User } from "@/lib/types/supabase";
 
 interface LogHoursDialogProps {
   event: OutreachEvent;
@@ -104,7 +104,7 @@ export default function LogHoursDialog({
   const fetchUsers = useCallback(async () => {
     setFetchingUsers(true);
     try {
-      const [error, allUsers] = await listAllUsers();
+      const [error, allUsers] = await getAllUsers();
 
       if (error || !allUsers) {
         throw new Error(error ?? "Failed to load users");
@@ -493,8 +493,10 @@ function UserCombobox({
             {currentUser ? (
               <>
                 <UserIcon className="h-4 w-4 opacity-70" />
-                <span className="truncate" title={currentUser.name}>
-                  {currentUser.name}
+                <span
+                  className="truncate"
+                  title={currentUser?.user_metadata?.full_name || "Unknown"}>
+                  {currentUser?.user_metadata?.full_name || "Unknown"}
                 </span>
               </>
             ) : (
@@ -513,7 +515,7 @@ function UserCombobox({
               {users.map((user) => (
                 <CommandItem
                   key={user.id}
-                  value={user.name}
+                  value={currentUser?.user_metadata?.full_name || "Unknown"}
                   onSelect={() => {
                     onChange(user.id);
                     setOpen(false);
@@ -524,8 +526,10 @@ function UserCombobox({
                       user.id === value ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  <span className="truncate" title={user.name}>
-                    {user.name}
+                  <span
+                    className="truncate"
+                    title={currentUser?.user_metadata?.full_name || "Unknown"}>
+                    {currentUser?.user_metadata?.full_name || "Unknown"}
                   </span>
                 </CommandItem>
               ))}

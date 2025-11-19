@@ -8,38 +8,36 @@ import {
 } from "@/components/ui/card";
 
 import FlagsTab from "./FlagsTab";
-import { createSupabaseServerComponentClient } from "@/lib/supabase/server";
-import { mapProfileToUser } from "@/lib/supabase/mappers";
 import type { FeatureFlag } from "@/lib/types/flags";
-import type { User } from "@/lib/types/models";
 import type { FlagRecord } from "./actions";
+import { makeSBRequest } from "@/lib/supabase/supabase";
+import { UserData } from "@/lib/types/supabase";
+import { getSBBrowserClient } from "@/lib/supabase/sbClient";
 
 export default async function SettingsPage() {
-  const supabase = createSupabaseServerComponentClient();
+  const supabase = getSBBrowserClient();
   const {
     data: { user: authUser }
   } = await supabase.auth.getUser();
 
-  let profile: User | null = null;
+  let userData: UserData | null = null;
 
   if (authUser) {
-    const { data: profileRow } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", authUser.id)
-      .maybeSingle();
+    const { data } = await makeSBRequest(async (sb) =>
+      sb.from("UserData").select("*").eq("user", authUser.id).maybeSingle()
+    );
 
-    profile = profileRow ? mapProfileToUser(profileRow) : null;
+    userData = data;
   }
 
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = userData?.role === "admin";
 
   let flags: FlagRecord[] = [];
   let flagError: string | null = null;
 
   if (isAdmin) {
     const { data: rows, error } = await supabase
-      .from("feature_flags")
+      .from("FeatureFlags")
       .select("*")
       .order("name", { ascending: true });
 
@@ -48,11 +46,18 @@ export default async function SettingsPage() {
         error?.message ?? "Unknown error"
       })`;
     } else {
-      flags = (rows as FeatureFlag[]).map(mapFeatureFlagModelToRecord);
+      flags = rows.map((row) => {
+        return {
+          id: row.id,
+          name: row.name as FlagRecord["name"],
+          flag: row.flag as FeatureFlag,
+          created: "",
+          updated: ""
+        };
+      });
     }
   }
-  const displayName =
-    profile?.name || profile?.email || authUser?.email || "Unknown";
+  const displayName = authUser?.user_metadata?.full_name || "Unknown";
 
   return (
     <div className="container mx-auto max-w-5xl space-y-8 py-10">
@@ -106,21 +111,4 @@ export default async function SettingsPage() {
       </Tabs>
     </div>
   );
-}
-
-function mapFeatureFlagModelToRecord(model: FeatureFlag): FlagRecord {
-  const row = model as unknown as {
-    id?: number;
-    name?: string | null;
-    flag?: unknown;
-  };
-  return {
-    id: String(row.id ?? ""),
-    name: row.name ?? "",
-    flag: row.flag as unknown as FeatureFlag,
-    // Supabase FeatureFlags doesn't include created/updated in the typed
-    // schema — provide empty strings for compatibility with the UI.
-    created: "",
-    updated: ""
-  };
 }

@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 
 import { logger } from "@/lib/logger";
 import type { FeatureFlag, FlagNames } from "@/lib/types/flags";
-import type { FeatureFlag as FeatureFlagModel } from "@/lib/types/supabase";
-import type { User } from "@/lib/types/models";
-import { mapProfileToUser } from "@/lib/supabase/mappers";
+import type {
+  FeatureFlag as FeatureFlagModel,
+  User,
+  UserData
+} from "@/lib/types/supabase";
 
 import {
   flagRoleOptions,
@@ -14,9 +16,10 @@ import {
   type UpdateFlagPayload
 } from "./flag-schemas";
 import { getSBBrowserClient } from "@/lib/supabase/sbClient";
+import { makeSBRequest } from "@/lib/supabase/supabase";
 
 export type FlagRecord = {
-  id: string;
+  id: number;
   name: FlagNames;
   flag: FeatureFlag;
   created: string;
@@ -51,22 +54,17 @@ export async function updateFlagAction(
     data: { user: authUser }
   } = await supabase.auth.getUser();
 
-  let currentUser: User | null = null;
+  let userData: UserData | null = null;
 
   if (authUser) {
-    // profiles isn't included in the typed supabase DB map, use an
-    // untyped query and silence the explicit-any rule.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profileRow } = await (supabase as any)
-      .from("profiles")
-      .select("*")
-      .eq("id", authUser.id)
-      .maybeSingle();
+    const { data } = await makeSBRequest(async (sb) =>
+      sb.from("UserData").select("*").eq("user", authUser.id).maybeSingle()
+    );
 
-    currentUser = profileRow ? mapProfileToUser(profileRow) : null;
+    userData = data;
   }
 
-  if (!currentUser || currentUser.role !== "admin") {
+  if (!userData || userData.role !== "admin") {
     return {
       success: false,
       error: "You must be an admin to update feature flags."
@@ -112,7 +110,7 @@ function mapModelToRecord(model: FeatureFlagModel): FlagRecord {
     flag?: unknown;
   };
   return {
-    id: String(row.id ?? ""),
+    id: row.id ?? 0,
     name: row.name ?? "",
     flag: row.flag as unknown as FeatureFlag,
     created: "",

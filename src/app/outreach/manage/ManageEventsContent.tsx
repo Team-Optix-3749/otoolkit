@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from "react";
 import useSWR from "swr";
 
 import { fetchEvents, fetchSessionsForEvent } from "@/lib/db/outreach";
-import type { OutreachEvent, OutreachSession } from "@/lib/types/models";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -14,6 +13,7 @@ import EventsList from "./EventsList";
 import EventDetails from "./EventDetails";
 
 import { Calendar } from "lucide-react";
+import { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
 
 type ManageEventsContentProps = {
   variant?: "page" | "sheet";

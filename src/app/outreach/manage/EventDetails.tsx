@@ -1,8 +1,8 @@
-import type { OutreachEvent, OutreachSession } from "@/lib/types/models";
 import { Calendar, Clock, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import LogHoursDialog from "./LogHoursDialog";
 import EventSessionsTable from "./EventSessionsTable";
+import { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
 
 interface EventDetailsProps {
   selectedEvent: OutreachEvent | null;
@@ -49,7 +49,7 @@ export default function EventDetails({
                   <Clock className="h-4 w-4" />
                   {sessions
                     ? `${sessions.reduce(
-                        (sum, session) => sum + session.minutes,
+                        (sum, session) => sum + (session.minutes || 0),
                         0
                       )} minutes total`
                     : "Loading..."}
