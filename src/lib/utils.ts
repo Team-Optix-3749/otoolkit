@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import { ResponseCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { twMerge } from "tailwind-merge";
 
 export const ShortMonths = {
@@ -87,6 +88,7 @@ export function getSearchParamsString(params: SearchParams, basePath = "") {
   const searchParams = new URLSearchParams(params);
   return `${basePath}?${searchParams.toString()}`;
 }
+
 export function assertEnv(name: string, value: string | undefined) {
   if (!value) {
     throw new Error(`Missing ${name} environment variable. Got ${value}`);

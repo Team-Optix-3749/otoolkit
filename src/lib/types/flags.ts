@@ -1,10 +1,7 @@
 export const FLAG_NAME_VALUES = [
-  "scouting_page_enabled",
-  "outreach_page_enabled",
   "advanced_reporting",
+  "disabled_pages",
   "outreach_minutes_cutoff",
-  "pb_cookie_expiration_days",
-  "pb_cookie_name",
   "flag_ttl_ms"
 ] as const;
 
@@ -17,6 +14,7 @@ export type FeatureFlag =
       percent?: number;
       roles?: string[];
       value?: string | number;
+      list?: (string | number)[];
       paramEvalMethod?: "OR" | "AND";
       percentEvalMethod?: "ID" | "RANDOM";
     };
@@ -28,6 +26,7 @@ export type FlagParams = Partial<{
 
 export type EvalRet = {
   enabled: boolean;
-  value: Extract<FeatureFlag, object>["value"];
+  value?: Extract<FeatureFlag, object>["value"];
+  list?: Extract<FeatureFlag, object>["list"];
   exists: boolean;
 };

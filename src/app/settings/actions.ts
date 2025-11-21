@@ -4,11 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { logger } from "@/lib/logger";
 import type { FeatureFlag, FlagNames } from "@/lib/types/flags";
-import type {
-  FeatureFlag as FeatureFlagModel,
-  User,
-  UserData
-} from "@/lib/types/supabase";
+import type { Tables } from "@/lib/types/supabase";
+import type { UserData } from "@/lib/types/db";
+
+type FeatureFlagModel = Tables<"FeatureFlags">;
 
 import {
   flagRoleOptions,

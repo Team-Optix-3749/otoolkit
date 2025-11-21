@@ -15,11 +15,10 @@ export async function manualModifyOutreachHours(
   }
 
   try {
-    // We use makeSBRequest for queries; don't need the typed client here.
     const { data, error } = await makeSBRequest(async (sb) =>
       sb
         .from("UserData")
-        .select("id, outreach_minutes")
+        .select("outreach_minutes")
         .eq("user", userId)
         .maybeSingle<UserDataRow>()
     );
@@ -34,7 +33,7 @@ export async function manualModifyOutreachHours(
       }
 
       const { error: insertError } = await makeSBRequest(async (sb) =>
-        sb.from("UserData").insert({
+        sb.from("UserData").upsert({
           user: userId,
           outreach_minutes: deltaMinutes,
           outreach_events: 0

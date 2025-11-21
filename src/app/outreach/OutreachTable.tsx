@@ -19,8 +19,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import EditUserDialog from "./EditUserDialog";
 import ManageEventsSheet from "@/app/outreach/manage/ManageEventsSheet";
-import { UserData } from "@/lib/types/supabase";
-import { UserInfo } from "../../components/UserInfo";
+import type { UserData } from "@/lib/types/db";
+import { UserInfo } from "@/components/UserInfo";
 
 type OutreachTableProps = {
   allUsers: UserData[];
@@ -77,6 +77,64 @@ type SortConfig = {
   direction: SortDirection;
 };
 
+type ExtendedUserData = UserData & {
+  last_outreach_event?: string | null;
+  lastOutreachEvent?: string | null;
+};
+
+function getUserSortValue(user: UserData): string {
+  return (
+    user.name?.toLowerCase() ??
+    user.email?.toLowerCase() ??
+    user.user.toLowerCase()
+  );
+}
+
+function getLastOutreachDate(user: ExtendedUserData): string | null {
+  const snake = user.last_outreach_event;
+  if (typeof snake === "string" && snake.length) {
+    return snake;
+  }
+
+  const camel = user.lastOutreachEvent as string | null | undefined;
+  if (typeof camel === "string" && camel.length) {
+    return camel;
+  }
+
+  return user.created_at ?? null;
+}
+
+function sortUsersList(users: UserData[], config: SortConfig): UserData[] {
+  const multiplier = config.direction === "ascending" ? 1 : -1;
+
+  return [...users].sort((a, b) => {
+    switch (config.key) {
+      case "user": {
+        return getUserSortValue(a).localeCompare(getUserSortValue(b)) * multiplier;
+      }
+      case "outreachMinutes": {
+        const diff = (a.outreach_minutes ?? 0) - (b.outreach_minutes ?? 0);
+        if (diff === 0) return 0;
+        return diff > 0 ? multiplier : -multiplier;
+      }
+      case "lastOutreachEvent": {
+        const aTimestamp = Date.parse(
+          getLastOutreachDate(a as ExtendedUserData) ?? ""
+        );
+        const bTimestamp = Date.parse(
+          getLastOutreachDate(b as ExtendedUserData) ?? ""
+        );
+        const safeA = Number.isFinite(aTimestamp) ? aTimestamp : 0;
+        const safeB = Number.isFinite(bTimestamp) ? bTimestamp : 0;
+        if (safeA === safeB) return 0;
+        return safeA > safeB ? multiplier : -multiplier;
+      }
+      default:
+        return 0;
+    }
+  });
+}
+
 // Main OutreachTable component
 export function OutreachTable({
   allUsers,
@@ -87,42 +145,17 @@ export function OutreachTable({
   isMobile = false,
   refetchData
 }: OutreachTableProps) {
-  const [sortedUsers, setSortedUsers] = useState(allUsers);
-
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "user",
     direction: "ascending"
   });
 
+  const [sortedUsers, setSortedUsers] = useState<UserData[]>(() =>
+    sortUsersList(allUsers, sortConfig)
+  );
+
   useEffect(() => {
-    const sortUsers = async (users: UserData[], config: typeof sortConfig) => {
-        return [...users].sort((a, b) => {
-        let aValue: string | number;
-        let bValue: string | number;
-
-        switch (config.key) {
-          case "user":
-            aValue = a.user. || "";
-            bValue = b.user. || "";
-            break;
-          case "outreachMinutes":
-            aValue = a.outreach_minutes || 0;
-            bValue = b.outreach_minutes || 0;
-            break;
-          default:
-            return 0;
-        }
-
-        if (aValue < bValue) {
-          return config.direction === "ascending" ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return config.direction === "ascending" ? 1 : -1;
-        }
-        return 0;
-      });
-    };
-    setSortedUsers(sortUsers(allUsers, sortConfig));
+    setSortedUsers(sortUsersList(allUsers, sortConfig));
   }, [allUsers, sortConfig]);
 
   // Mobile Card Layout (avoid nested scroll; parent provides vertical scrolling)
@@ -207,22 +240,29 @@ export function OutreachTable({
             <div className="text-center py-8">No user data found</div>
           ) : (
             sortedUsers.map((userData) => (
-              <Card key={userData.id} className="p-4">
+              <Card key={userData.user} className="p-4">
                 <CardContent className="p-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <UserInfo userId={userData.user} />
+                      <UserInfo
+                        user={userData}
+                      />
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
                       <Badge
                         className={`${getBadgeStatusStyles(
-                          userData.outreachMinutes,
+                          userData.outreach_minutes ?? 0,
                           outreachMinutesCutoff,
                           outreachMinutesCutoff - 60 * 3
                         )} text-sm`}>
-                        {formatMinutes(userData.outreachMinutes)}
+                        {formatMinutes(userData.outreach_minutes ?? 0)}
                       </Badge>
-                      {canManage && <EditUserDialog userData={userData} />}
+                      {canManage && (
+                        <EditUserDialog
+                          userData={userData}
+                          refreshFunc={refetchData}
+                        />
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -316,25 +356,25 @@ export function OutreachTable({
             </TableRow>
           ) : (
             sortedUsers.map((userData) => (
-              <TableRow key={userData.id}>
+              <TableRow key={userData.user}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2 min-w-0">
                     <Avatar>
                       <AvatarImage
-                        src={userData.expand?.user?.avatar ?? undefined}
-                        alt={userData.expand?.user?.name}
+                        src={userData.avatar_url ?? undefined}
+                        alt={userData.name ?? userData.email ?? "User avatar"}
                         className="rounded-full"
                       />
                       <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
-                        {userData.expand?.user?.name?.charAt(0) || "?"}
+                        {userData.name?.charAt(0)?.toUpperCase() || "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
                       <div className="font-medium truncate">
-                        {userData.expand?.user?.name || "Unknown"}
+                        {userData.name || "Unknown"}
                       </div>
                       <div className="text-sm text-muted-foreground truncate">
-                        {userData.expand?.user?.email}
+                        {userData.email || "No email"}
                       </div>
                     </div>
                   </div>
@@ -342,15 +382,17 @@ export function OutreachTable({
                 <TableCell>
                   <Badge
                     className={`${getBadgeStatusStyles(
-                      userData.outreachMinutes,
+                      userData.outreach_minutes ?? 0,
                       outreachMinutesCutoff,
                       outreachMinutesCutoff - 60 * 3
                     )} text-sm md:text-base`}>
-                    {formatMinutes(userData.outreachMinutes)}
+                    {formatMinutes(userData.outreach_minutes ?? 0)}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {formatPbDate(userData.lastOutreachEvent ?? "") || "N/A"}
+                  {formatPbDate(
+                    getLastOutreachDate(userData as ExtendedUserData) ?? ""
+                  ) || "N/A"}
                 </TableCell>
                 {canManage && (
                   <TableCell>

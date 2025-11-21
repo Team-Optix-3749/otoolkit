@@ -1,5 +1,5 @@
 import { makeSBRequest } from "../supabase/supabase";
-import { UserData } from "../types/supabase";
+import type { UserData } from "../types/db";
 
 type PaginatedResult<T> = {
   items: T[];

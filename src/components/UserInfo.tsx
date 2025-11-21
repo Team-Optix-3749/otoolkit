@@ -1,29 +1,43 @@
-import UserAvatar from "@/components/UserAvatar";
-import { getUserWithId } from "@/lib/db/server";
-import { User } from "@/lib/types/supabase";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export function UserInfo({ userId }: { userId: string }) {
-  const [user, setUser] = useState<User | null>(null);
+import UserAvatar from "@/components/UserAvatar";
+import type { FullUserData } from "@/lib/types/db";
+import { getUserDataByUserId } from "@/lib/db/user";
+
+type MinimalUserData = Pick<FullUserData, "name" | "email" | "avatar_url">;
+
+type UserInfoProps = Partial<{
+  user: MinimalUserData;
+  userId: string;
+}>;
+
+export function UserInfo({ user, userId }: UserInfoProps) {
+  const [userData, setUserData] = useState<MinimalUserData | undefined>(user);
+
+  console.log("UserInfo render", { user, userId, userData });
 
   useEffect(() => {
-    getUserWithId(userId).then(([error, user]) => {
-      if (error || !user) {
-        return;
-      }
-      setUser(user);
-    });
+    if(userId) {
+      (async () => {
+        const [error, fetchedUserData] = await getUserDataByUserId(userId);
+        if (!error && fetchedUserData) {
+          setUserData({
+            name: fetchedUserData.name,
+            email: fetchedUserData.email,
+            avatar_url: fetchedUserData.avatar_url
+          });
+        }
+      })()
+    }
   }, [userId]);
 
   return (
     <div className="flex items-center gap-2">
-      <UserAvatar userId={userId} />
+      <UserAvatar name={userData?.name} avatarUrl={userData?.avatar_url} />
       <div>
-        <div className="font-medium">
-          {user?.user_metadata?.full_name || "Unknown User"}
-        </div>
+        <div className="font-medium">{userData?.name || "Unknown User"}</div>
         <div className="text-sm text-muted-foreground">
-          {user?.email || "No Email"}
+          {userData?.email || "No Email"}
         </div>
       </div>
     </div>

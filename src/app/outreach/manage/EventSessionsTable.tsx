@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/table";
 
 import { Clock, Trash2 } from "lucide-react";
-import { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
-import { UserInfo } from "../../../components/UserInfo";
+import type { OutreachEvent, OutreachSession } from "@/lib/types/db";
+import { UserInfo } from "@/components/UserInfo";
 
 interface EventSessionsTableProps {
   event: OutreachEvent;

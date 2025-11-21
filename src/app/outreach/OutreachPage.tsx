@@ -21,7 +21,7 @@ import { OutreachTable } from "./OutreachTable";
 import ActivityGraph from "./ActivityGraph";
 
 import { Users, Clock, TrendingUp, Calendar } from "lucide-react";
-import { User, UserData } from "@/lib/types/supabase";
+import type { User, UserData } from "@/lib/types/db";
 import { fetchUserDataPaginated } from "@/lib/db/user";
 import { getProfileImageUrl } from "@/lib/supabase/supabase";
 
@@ -72,20 +72,27 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
     });
 
   const allUsers = data ? data.flatMap((page) => page.items) : [];
-  const currentUserData = useMemo<UserData | null>(() => {
-    if (!allUsers.length) return null;
-    if (authUser) {
-      return (
-        allUsers.find((entry) => entry.user === authUser.id) ?? allUsers[0]
-      );
-    }
-
-    return allUsers[0];
-  }, [allUsers, authUser]);
+  const currentUserData = authUser;
 
   const currentUser: User | null = authUser;
   const activityUserId = authUser?.id ?? null;
-  const canManage = hasPermission(currentUser?.role ?? null, "outreach:manage");
+  const canManage = hasPermission(
+    currentUserData?.role ?? null,
+    "outreach:manage"
+  );
+  const currentMinutes = currentUserData?.outreach_minutes ?? 0;
+  const profileName =
+    currentUserData?.name ?? currentUser?.user_metadata?.full_name ?? "Unknown User";
+  const profileEmail = currentUserData?.email ?? currentUser?.email ?? "No email";
+  const profileAvatar =
+    currentUserData?.avatar_url ?? getProfileImageUrl(currentUser) ?? undefined;
+  const progressPercent = outreachMinutesCutoff
+    ? Math.min(100, Math.round((currentMinutes / outreachMinutesCutoff) * 100))
+    : 0;
+  const minutesRemaining = Math.max(
+    0,
+    outreachMinutesCutoff - currentMinutes
+  );
   const totalItems = data?.[0]?.totalItems || 0;
   const hasMore = allUsers.length < totalItems;
   const isLoading = !data && !error;
@@ -168,29 +175,27 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
               <div className="relative flex items-center justify-center">
                 <Avatar className="h-10 w-10 md:h-12 md:w-12 flex-shrink-0">
                   <AvatarImage
-                    src={getProfileImageUrl(currentUser) ?? undefined}
-                    alt={currentUser?.user_metadata?.full_name ?? "User avatar"}
+                    src={profileAvatar}
+                    alt={profileName}
                     className="rounded-full object-cover"
                   />
                   <AvatarFallback className="bg-gradient-to-br from-blue-800 to-purple-800 text-white text-sm font-semibold rounded-full flex items-center justify-center h-full w-full">
-                    {currentUser?.user_metadata?.full_name
-                      ?.charAt(0)
-                      .toUpperCase() ?? "?"}
+                    {profileName.charAt(0).toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="font-semibold text-base md:text-lg truncate">
-                  {currentUser?.user_metadata?.full_name || "Unknown User"}
+                  {profileName}
                 </h3>
                 <p className="text-sm text-muted-foreground truncate">
-                  {currentUser?.email ?? "No email"}
+                  {profileEmail}
                 </p>
               </div>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {currentUserData?.outreach_minutes || 0 ? (
+            {currentUserData ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-muted-foreground">
@@ -201,7 +206,7 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
                     <div className="text-2xl md:text-3xl font-bold">
-                      {formatMinutes(currentUserData?.outreach_minutes || 0)}
+                      {formatMinutes(currentMinutes)}
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
                       Total completed
@@ -209,12 +214,11 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                   </div>
                   <Badge
                     className={`${getBadgeStatusStyles(
-                      currentUserData?.outreach_minutes || 0,
+                      currentMinutes,
                       outreachMinutesCutoff,
                       outreachMinutesCutoff - 60 * 3
                     )} text-xs md:text-sm px-2 md:px-3 py-1`}>
-                    {currentUserData?.outreach_minutes ||
-                    0 >= outreachMinutesCutoff
+                    {currentMinutes >= outreachMinutesCutoff
                       ? "Complete"
                       : "In Progress"}
                   </Badge>
@@ -224,36 +228,21 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>Progress</span>
-                    <span>
-                      {Math.round(
-                        (currentUserData?.outreach_minutes ||
-                          0 / outreachMinutesCutoff) * 100
-                      )}
-                      %
-                    </span>
+                    <span>{progressPercent}%</span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-2">
                     <div
                       className="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-300"
                       style={{
-                        width: `${Math.min(
-                          100,
-                          (currentUserData?.outreach_minutes ||
-                            0 / outreachMinutesCutoff) * 100
-                        )}%`
+                        width: `${progressPercent}%`
                       }}></div>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {currentUserData?.outreach_minutes ||
-                      (0 < outreachMinutesCutoff && (
-                        <>
-                          {formatMinutes(
-                            outreachMinutesCutoff -
-                              (currentUserData?.outreach_minutes || 0)
-                          )}{" "}
-                          remaining
-                        </>
-                      ))}
+                    {outreachMinutesCutoff > 0 ? (
+                      <>{formatMinutes(minutesRemaining)} remaining</>
+                    ) : (
+                      ""
+                    )}
                   </div>
                 </div>
               </div>

@@ -31,9 +31,8 @@ import {
   DrawerTrigger
 } from "@/components/ui/drawer";
 
-import NavbarSkeleton from "./skeletons/NavbarSkeleton";
 import { Separator } from "@/components/ui/separator";
-import { User } from "@/lib/types/supabase";
+import type { FullUserData, User } from "@/lib/types/db";
 import { getProfileImageUrl } from "@/lib/supabase/supabase";
 
 type NavItem = {
@@ -45,11 +44,11 @@ type NavItem = {
   func?: () => boolean;
 };
 
-const PROFILE_ITEM: NavItem = {
+const USER_ITEM: NavItem = {
   showInMinimal: true,
-  label: "Profile",
-  url: "/user/profile",
-  msg: "Going to Profile",
+  label: "Settings",
+  url: "/settings",
+  msg: "Going to Settings",
   func: () => {
     toast.warning("Under Construction");
     return false;
@@ -91,7 +90,7 @@ const NAV_ITEMS: NavItem[] = [
   // }
 ];
 
-const USER_ITEMS: NavItem[] = [
+const AUTHED_ITEMS: NavItem[] = [
   {
     showInMinimal: true,
     icon: <LogOut className="h-5 w-5" />,
@@ -108,7 +107,7 @@ const USER_ITEMS: NavItem[] = [
 export type NavItems = typeof NAV_ITEMS;
 
 type ChildProps = {
-  user: User | null;
+  user: FullUserData | null;
   navItems: typeof NAV_ITEMS;
   onNavigate: (url: { url: string; msg?: string }) => void;
 } & ReturnType<typeof useNavbar>;
@@ -200,19 +199,19 @@ function Mobile({
               <Avatar className="h-12 w-12">
                 <AvatarImage
                   src={getProfileImageUrl(user)}
-                  alt={user.user_metadata?.name || "User"}
+                  alt={user?.name || "Unknown Name"}
                   className="rounded-full"
                 />
                 <AvatarFallback className="bg-muted text-muted-foreground text-base rounded-full flex items-center justify-center h-full w-full">
-                  {(user.user_metadata?.name || "U").charAt(0)}
+                  {(user?.name || "U").charAt(0)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
                 <span className="text-base font-medium text-foreground">
-                  {user.user_metadata?.name || "Unknown User"}
+                  {user?.user_metadata?.name || "Unknown User"}
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  {user.role
+                  {user?.role
                     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
                     : "? Role ?"}
                 </span>
@@ -244,7 +243,7 @@ function Mobile({
             <Separator className="my-4" />
 
             {user ? (
-              USER_ITEMS.map((item, index) => (
+              AUTHED_ITEMS.map((item, index) => (
                 <Button
                   key={index}
                   variant="ghost"
@@ -373,7 +372,7 @@ function Desktop({
             ))}
 
             {user &&
-              USER_ITEMS.map((item, index) => (
+              AUTHED_ITEMS.map((item, index) => (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -396,14 +395,14 @@ function Desktop({
             {user ? (
               <div className="flex items-center space-x-3 pl-6 ml-2 border-l border-border">
                 <Link
-                  href={PROFILE_ITEM.url}
+                  href={USER_ITEM.url}
                   className="flex items-center space-x-3 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100 group">
                   <div className="hidden flex-col items-start md:flex">
                     <span className="text-sm font-medium text-foreground underline transition-all duration-200 ease-in-out decoration-transparent group-hover:decoration-current">
-                      {user.user_metadata?.name || "Unknown User"}
+                      {user?.name || "Unknown Name"}
                     </span>
                     <span className="text-sm font-sm text-muted-foreground">
-                      {user.role
+                      {user?.role
                         ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
                         : "? Role ?"}
                     </span>
@@ -411,11 +410,11 @@ function Desktop({
                   <Avatar className="h-8 w-8">
                     <AvatarImage
                       src={getProfileImageUrl(user)}
-                      alt={user.user_metadata?.name || "User"}
+                      alt={user?.name || "Unknown Name"}
                       className="rounded-full"
                     />
                     <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
-                      {(user.user_metadata?.name || "U").charAt(0)}
+                      {(user?.name || "U").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </Link>

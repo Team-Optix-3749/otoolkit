@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSBBrowserClient } from "../supabase/sbClient";
 import { makeSBRequest } from "../supabase/supabase";
-import { OutreachEvent, OutreachSession } from "../types/supabase";
+import type { OutreachEvent, OutreachSession } from "../types/db";
 import { cache } from "react";
+import { runFlag } from "../flags";
 
 type SessionInsert = {
   userId: string;
@@ -159,29 +160,17 @@ export async function fetchUserSessionEventDates(
   return [null, data.map((row) => row.event.date ?? "")];
 }
 
-const DEFAULT_MINUTES_CUTOFF = 900;
 export const getOutreachMinutesCutoff = cache(async (): Promise<number> => {
-  const supabase = getSBBrowserClient();
+  const DEFAULT_MINUTES_CUTOFF = 900;
 
-  const { data, error } = await supabase
-    .from("FeatureFlags")
-    .select("flag")
-    .eq("name", "outreach_minutes_cutoff")
-    .maybeSingle();
+  const { enabled, value, exists } = await runFlag(
+    "outreach_minutes_cutoff",
+    getSBBrowserClient()
+  );
 
-  if (error || !data) {
-    return DEFAULT_MINUTES_CUTOFF;
-  }
-
-  const flagRow = data as { flag?: unknown } | null;
-  const flag = flagRow?.flag as
-    | boolean
-    | { enabled?: boolean; value?: number }
-    | null;
-
-  if (flag && typeof flag === "object" && typeof flag.value === "number") {
-    return flag.value;
-  }
+  if (!exists) return DEFAULT_MINUTES_CUTOFF;
+  if (enabled && typeof value === "number" && Number.isFinite(value))
+    return value;
 
   return DEFAULT_MINUTES_CUTOFF;
 });

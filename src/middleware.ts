@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { hasPermission } from "./lib/permissions";
 import { runFlag } from "./lib/flags";
 import { getSBServerClient } from "./lib/supabase/sbServer";
+import { UserData } from "./lib/types/db";
+import { createServerClient } from "@supabase/ssr";
 
 const ROUTE_PERMISSIONS: Partial<
   Record<string, Parameters<typeof hasPermission>[1]>
@@ -15,72 +17,87 @@ const ROUTE_PERMISSIONS: Partial<
 const FLAG_EXEMPT_PAGES = new Set(["settings"]);
 
 export async function middleware(request: NextRequest) {
-  // const originalPath = request.nextUrl.pathname;
-  // const segments = originalPath.split("/").filter(Boolean);
-  // const page = segments.at(0);
+  const originalPath = request.nextUrl.pathname;
+  const segments = originalPath.split("/").filter(Boolean);
+  const page = segments.at(0);
 
-  // if (!page || page.startsWith("_") || page === "api") {
-  //   return response;
-  // }
+  let response = NextResponse.next({
+    request
+  });
 
-  // let role: UserRole = "guest";
-  // let userId: string | undefined;
+  const supabase = getSBServerClient({
+    getAll: () => {
+      return request.cookies.getAll();
+    },
+    setAll(cookiesToSet) {
+      cookiesToSet.forEach(({ name, value }) =>
+        request.cookies.set(name, value)
+      );
+      response = NextResponse.next({
+        request
+      });
+      cookiesToSet.forEach(({ name, value, options }) =>
+        response.cookies.set(name, value, options)
+      );
+    }
+  });
 
-  // const {
-  //   data: { user: authUser }
-  // } = await supabase.auth.getUser();
+  const claims = await supabase.auth.getClaims();
 
-  // if (authUser) {
-  //   userId = authUser.id;
+  if (!page) {
+    return response;
+  }
 
-  //   const { data: profile } = await supabase
-  //     .from("profiles")
-  //     .select("role")
-  //     .eq("id", authUser.id)
-  //     .maybeSingle();
+  let role: UserData["role"] = "guest";
+  let userId: string | undefined;
 
-  //   role = profile?.role ?? role;
-  // }
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
-  // if (!FLAG_EXEMPT_PAGES.has(page)) {
-  //   const pageFlag = await runFlag(
-  //     `${page}_page_enabled`,
-  //     {
-  //       userRole: role,
-  //       userId
-  //     },
-  //     supabase
-  //   );
+  if (user) {
+    userId = user.id;
 
-  //   if (pageFlag.exists && !pageFlag.enabled) {
-  //     return mwRedirect(request, "/disabled", {
-  //       page: originalPath,
-  //       reason: "feature_disabled"
-  //     });
-  //   }
-  // }
+    const { data: userData } = await supabase
+      .from("UserData")
+      .select("role")
+      .eq("user", user.id)
+      .limit(1)
+      .single();
 
-  // const requiredPermission = ROUTE_PERMISSIONS[page];
+    if (userData) {
+      role = userData.role;
+    }
+  }
 
-  // if (requiredPermission && !hasPermission(role, requiredPermission)) {
-  //   return mwRedirect(request, "/unauthorized", { page: originalPath });
-  // }
+  const requiredPermission = ROUTE_PERMISSIONS[page];
+  if (requiredPermission && !hasPermission(role, requiredPermission)) {
+    if (user?.id) {
+      return mwRedirect(response, request.nextUrl.clone(), "/unauthorized", {
+        page: originalPath
+      });
+    }
 
-  // return response;
+    return mwRedirect(response, request.nextUrl.clone(), "/auth/login", {
+      next: request.nextUrl.pathname
+    });
+  }
 
-  const response = NextResponse.next({ request });
+  if (FLAG_EXEMPT_PAGES.has(page)) return response;
 
-  const supabase = getSBServerClient(response.cookies);
+  const { exists, list, enabled } = await runFlag("disabled_pages", supabase, {
+    userRole: role,
+    userId
+  });
 
-  const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  if (!exists || !enabled || !list || list.length === 0) return response;
 
-  // // Later, replace "true" with a flag check to see if they can view page.
-  // if (!user && !request.nextUrl.pathname.startsWith("/auth")) {
-  //   return mwRedirect(response, request.nextUrl.clone(), "/auth/login", {
-  //     next: request.nextUrl.pathname
-  //   });
-  // }
+  if (list.includes(page)) {
+    return mwRedirect(response, request.nextUrl.clone(), "/disabled", {
+      page: originalPath,
+      reason: "feature_disabled"
+    });
+  }
 
   return response;
 }
@@ -109,8 +126,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * - auth (authentication pages)
+     * - api (API routes)
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"
+    "/((?!_next/static|_next/image|favicon.ico|auth|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"
   ]
 };

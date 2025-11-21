@@ -1,32 +1,25 @@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useEffect, useState } from "react";
-import Loader from "./Loader";
-import { getUserWithId } from "@/lib/db/server";
-import { getProfileImageUrl } from "@/lib/supabase/supabase";
+import { cn } from "@/lib/utils";
 
-export default function UserAvatar({ userId }: { userId: string }) {
-  const [loading, setLoading] = useState(true);
-  const [imageSrc, setImageSrc] = useState<string | undefined>(undefined);
+type UserAvatarProps = {
+  name?: string | null;
+  avatarUrl?: string | null;
+  className?: string;
+  fallback?: string;
+};
 
-  useEffect(() => {
-    (async () => {
-      const [error, user] = await getUserWithId(userId);
-
-      if (error || !user) {
-        setLoading(false);
-        return;
-      }
-
-      const profileImageUrl = getProfileImageUrl(user);
-      setImageSrc(profileImageUrl);
-      setLoading(false);
-    })();
-  }, []);
+export default function UserAvatar({
+  name,
+  avatarUrl,
+  className,
+  fallback
+}: UserAvatarProps) {
+  const initials = fallback ?? name?.trim().charAt(0)?.toUpperCase() ?? "?";
 
   return (
-    <Avatar className="h-8 w-8">
-      <AvatarImage src={imageSrc} />
-      <AvatarFallback>{loading ? <Loader /> : "?"}</AvatarFallback>
+    <Avatar className={cn("h-8 w-8", className)}>
+      <AvatarImage src={avatarUrl ?? undefined} alt={name ?? "User avatar"} />
+      <AvatarFallback>{initials}</AvatarFallback>
     </Avatar>
   );
 }

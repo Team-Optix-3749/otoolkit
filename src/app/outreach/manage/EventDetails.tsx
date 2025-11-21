@@ -2,7 +2,7 @@ import { Calendar, Clock, Users } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import LogHoursDialog from "./LogHoursDialog";
 import EventSessionsTable from "./EventSessionsTable";
-import { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
+import type { OutreachEvent, OutreachSession } from "@/lib/types/db";
 
 interface EventDetailsProps {
   selectedEvent: OutreachEvent | null;

@@ -1,5 +1,3 @@
-import { User as SBUser } from "@supabase/supabase-js";
-
 export type Json =
   | string
   | number
@@ -7,15 +5,6 @@ export type Json =
   | null
   | { [key: string]: Json | undefined }
   | Json[];
-
-export type User = SBUser;
-export type UserData = Database["public"]["Tables"]["UserData"]["Row"];
-export type OutreachEvent =
-  Database["public"]["Tables"]["OutreachEvents"]["Row"];
-export type OutreachSession =
-  Database["public"]["Tables"]["OutreachSessions"]["Row"];
-export type Setting = Database["public"]["Tables"]["Settings"]["Row"];
-export type FeatureFlag = Database["public"]["Tables"]["FeatureFlags"]["Row"];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
@@ -144,26 +133,32 @@ export type Database = {
       };
       UserData: {
         Row: {
+          avatar_url: string | null;
           created_at: string;
-          id: number;
+          email: string;
+          name: string | null;
           outreach_events: number;
-          outreach_minutes: number | null;
+          outreach_minutes: number;
           role: Database["public"]["Enums"]["user_role"];
           user: string;
         };
         Insert: {
+          avatar_url?: string | null;
           created_at?: string;
-          id?: number;
-          outreach_events: number;
-          outreach_minutes?: number | null;
+          email?: string;
+          name?: string | null;
+          outreach_events?: number;
+          outreach_minutes?: number;
           role?: Database["public"]["Enums"]["user_role"];
           user: string;
         };
         Update: {
+          avatar_url?: string | null;
           created_at?: string;
-          id?: number;
+          email?: string;
+          name?: string | null;
           outreach_events?: number;
-          outreach_minutes?: number | null;
+          outreach_minutes?: number;
           role?: Database["public"]["Enums"]["user_role"];
           user?: string;
         };
@@ -178,6 +173,7 @@ export type Database = {
         Args: { p_user: string };
         Returns: undefined;
       };
+      sync_userdata_from_auth_users: { Args: never; Returns: undefined };
     };
     Enums: {
       user_role: "admin" | "member" | "guest";

@@ -9,7 +9,7 @@ import LogHoursDialog from "./LogHoursDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { logger } from "@/lib/logger";
-import { OutreachEvent } from "@/lib/types/supabase";
+import type { OutreachEvent } from "@/lib/types/db";
 
 interface EventsListProps {
   events: OutreachEvent[] | undefined;

@@ -8,7 +8,6 @@ import { getSBServerClient } from "./supabase/sbServer";
 
 import { EvalRet, FeatureFlag, FlagNames, FlagParams } from "./types/flags";
 
-type TypedClient = SupabaseClient<Database>;
 type FeatureFlagRow = Database["public"]["Tables"]["FeatureFlags"]["Row"];
 
 let FLAG_TTL_MS = 60000;
@@ -17,11 +16,13 @@ const flagsCache: Record<string, { flag: FeatureFlag; storedAt: number }> = {};
 
 export async function runFlag(
   flagName: FlagNames,
-  params?: FlagParams,
-  client?: TypedClient
+  client: SupabaseClient,
+  params?: FlagParams
 ): Promise<EvalRet> {
-  const supabase = getSBServerClient(await cookies());
-  const flag = await fetchFlag(flagName, supabase);
+  const flag = await fetchFlag(
+    flagName,
+    client || getSBServerClient(await cookies())
+  );
 
   if (flag === undefined) {
     return { enabled: false, value: undefined, exists: false };
@@ -33,7 +34,7 @@ export async function runFlag(
 
 async function fetchFlag(
   flagName: FlagNames,
-  client: TypedClient
+  client: SupabaseClient
 ): Promise<FeatureFlag | undefined> {
   const cache = flagsCache[flagName];
 
@@ -68,12 +69,28 @@ async function fetchFlag(
 function validateFlag(
   flag: FeatureFlag,
   params?: FlagParams
-): Pick<EvalRet, "enabled" | "value"> {
+): Omit<EvalRet, "exists"> {
   if (typeof flag === "boolean") {
-    return { enabled: flag, value: undefined };
+    return { enabled: flag };
   }
 
-  if (!flag.enabled) return { enabled: false, value: undefined };
+  const ret = {} as Omit<EvalRet, "exists">;
+
+  if (typeof flag.enabled === "boolean") {
+    ret.enabled = flag.enabled;
+  }
+
+  if (["string", "number"].includes(typeof flag.value)) {
+    ret.value = flag.value;
+  }
+
+  if (typeof flag.list === "object" && flag.list?.length) {
+    ret.list = flag.list;
+  }
+
+  if (!flag.percentEvalMethod && !flag.paramEvalMethod) {
+    return ret;
+  }
 
   const conditions: boolean[] = [];
 
@@ -98,26 +115,26 @@ function validateFlag(
     }
   }
 
-  if (flag.roles && params?.userRole) {
-    conditions.push(flag.roles.includes(params.userRole));
+  if (flag.roles) {
+    conditions.push(flag.roles.includes(params?.userRole || ""));
   }
 
   switch (flag.paramEvalMethod) {
     case "OR":
       return {
-        enabled: conditions.some(Boolean),
-        value: flag.value
+        ...ret,
+        enabled: conditions.some(Boolean)
       };
     case "AND":
     default:
       return {
-        enabled: conditions.every(Boolean),
-        value: flag.value
+        ...ret,
+        enabled: conditions.every(Boolean)
       };
   }
 }
 
-runFlag("flag_ttl_ms").then((res) => {
+runFlag("flag_ttl_ms", getSBServerClient(await cookies())).then((res) => {
   if (res.exists && res.enabled && typeof res.value === "number") {
     FLAG_TTL_MS = res.value;
     console.warn(`[Flags] Using flag TTL of ${FLAG_TTL_MS} ms`);

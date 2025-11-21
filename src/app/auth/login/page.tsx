@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useIsMounted } from "@/hooks/useIsHydrated";
@@ -26,7 +26,6 @@ import SkeletonLoginForm from "./SkeletonLoginForm";
 
 export default function LoginForm() {
   const router = useRouter();
-
   const { doMinimalRendering, setDefaultExpanded } = useNavbar();
   const isHydrated = useIsMounted();
 
@@ -37,24 +36,25 @@ export default function LoginForm() {
     setRedirectRoute(params.get("redirect") || "/");
   }, []);
 
-  const redirect = useCallback(() => {
+  const runRedirect = useCallback(() => {
     console.log("Redirecting to:", redirectRoute);
 
     toast.dismiss();
-    router.push(redirectRoute);
+    // router.push(redirectRoute);
   }, [router, redirectRoute]);
 
   const handleOAuth = async function (type: "discord" | "google") {
     toast.loading("Continue on the popup ...", {
       id: "oAuthLoader"
     });
+
     const state = await loginOAuth(type);
 
     switch (state) {
       case BaseStates.SUCCESS:
         toast.success("Login successful!", { id: "oAuthLoader" });
         logger.info({ provider: type }, "OAuth login successful");
-        redirect();
+        runRedirect();
         break;
       case BaseStates.ERROR:
       default:
@@ -80,19 +80,13 @@ export default function LoginForm() {
       toast.dismiss();
       toast.loading("Logging In ...", { id: "sLoader" });
 
-      let state = LoginStates.ERR_UNKNOWN;
-      state = await loginEmailPass(email, password);
+      let state = await loginEmailPass(email, password);
 
       switch (state) {
         case LoginStates.SUCCESS:
           toast.success("Login successful!", { id: "sLoader" });
           logger.info({ email }, "Password login successful");
-          redirect();
-          break;
-        case LoginStates.ERR_USER_USES_OAUTH:
-          toast.error(
-            "Hmm... It looks like you signed up using OAuth. Please use Google or Discord to login."
-          );
+          runRedirect();
           break;
         default:
           toast.error(state, {
@@ -101,15 +95,12 @@ export default function LoginForm() {
           break;
       }
     },
-    [redirect]
+    [runRedirect]
   );
 
   useEffect(() => {
     doMinimalRendering(true);
     setDefaultExpanded(false);
-
-    console.log("Prefetching route:", redirectRoute);
-    router.prefetch(redirectRoute);
 
     return () => {
       doMinimalRendering(false);

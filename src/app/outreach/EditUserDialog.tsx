@@ -16,8 +16,7 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Edit2, Minus, Plus } from "lucide-react";
-import { UserData } from "@/lib/types/supabase";
-import { getUserWithId } from "@/lib/db/server";
+import type { UserData } from "@/lib/types/db";
 
 export default function EditUserDialog({
   userData,
@@ -30,27 +29,20 @@ export default function EditUserDialog({
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"add" | "subtract">("add");
   const [adjustment, setAdjustment] = useState(0);
-  const [displayName, setDisplayName] = useState("Unknown User");
+  const [displayName, setDisplayName] = useState(
+    userData.name ?? "Unknown User"
+  );
 
   useEffect(() => {
     if (open) {
       setMode("add");
       setAdjustment(0);
     }
-
-    if (!displayName || displayName === "Unknown User") {
-      (async () => {
-        const [error, user] = await getUserWithId(userData.user);
-
-        if (error || !user) {
-          setDisplayName("Unknown User");
-          return;
-        }
-
-        setDisplayName(user.user_metadata.full_name || "Unknown User");
-      })();
-    }
   }, [open]);
+
+  useEffect(() => {
+    setDisplayName(userData.name ?? "Unknown User");
+  }, [userData.name]);
 
   const signedAdjustment = useMemo(() => {
     const magnitude = Math.abs(adjustment);

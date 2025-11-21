@@ -1,4 +1,6 @@
-import type { User, UserRole } from "./types/models";
+import type { UserData } from "./types/db";
+
+type UserRole = UserData["role"];
 
 const guest = ["outreach:view", "scouting:view", "scouting:submit"] as const;
 const member = [
@@ -25,6 +27,8 @@ export function hasPermission(
   return (ROLES[userRole] as readonly Permission[]).includes(flag);
 }
 
-export function getUserRole(user?: Pick<User, "role"> | null): UserRole | null {
+export function getUserRole(
+  user?: { role?: UserRole | null } | null
+): UserRole | null {
   return user?.role ?? null;
 }

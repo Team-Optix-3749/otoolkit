@@ -13,7 +13,7 @@ import EventsList from "./EventsList";
 import EventDetails from "./EventDetails";
 
 import { Calendar } from "lucide-react";
-import { OutreachEvent, OutreachSession } from "@/lib/types/supabase";
+import type { OutreachEvent, OutreachSession } from "@/lib/types/db";
 
 type ManageEventsContentProps = {
   variant?: "page" | "sheet";

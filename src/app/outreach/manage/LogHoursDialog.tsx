@@ -42,7 +42,7 @@ import {
   Save,
   Calendar
 } from "lucide-react";
-import { OutreachEvent, User } from "@/lib/types/supabase";
+import type { OutreachEvent, UserData } from "@/lib/types/db";
 
 interface LogHoursDialogProps {
   event: OutreachEvent;
@@ -65,7 +65,7 @@ export default function LogHoursDialog({
   onEventUpdated
 }: LogHoursDialogProps) {
   const [open, setOpen] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [fetchingUsers, setFetchingUsers] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
@@ -469,7 +469,7 @@ function UserCombobox({
   disabled,
   placeholder = "Select user..."
 }: {
-  users: User[];
+  users: UserData[];
   value: string;
   onChange: (val: string) => void;
   disabled?: boolean;
@@ -477,7 +477,8 @@ function UserCombobox({
 }) {
   const [open, setOpen] = useState(false);
 
-  const currentUser = users.find((u) => u.id === value);
+  const currentUser = users.find((u) => u.user === value);
+  const fallbackDisplay = currentUser?.name ?? currentUser?.email ?? "Unknown";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -495,8 +496,8 @@ function UserCombobox({
                 <UserIcon className="h-4 w-4 opacity-70" />
                 <span
                   className="truncate"
-                  title={currentUser?.user_metadata?.full_name || "Unknown"}>
-                  {currentUser?.user_metadata?.full_name || "Unknown"}
+                  title={fallbackDisplay}>
+                  {fallbackDisplay}
                 </span>
               </>
             ) : (
@@ -514,22 +515,22 @@ function UserCombobox({
             <CommandGroup>
               {users.map((user) => (
                 <CommandItem
-                  key={user.id}
-                  value={currentUser?.user_metadata?.full_name || "Unknown"}
+                  key={user.user}
+                  value={user.name ?? user.email ?? user.user}
                   onSelect={() => {
-                    onChange(user.id);
+                    onChange(user.user);
                     setOpen(false);
                   }}>
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      user.id === value ? "opacity-100" : "opacity-0"
+                      user.user === value ? "opacity-100" : "opacity-0"
                     )}
                   />
                   <span
                     className="truncate"
-                    title={currentUser?.user_metadata?.full_name || "Unknown"}>
-                    {currentUser?.user_metadata?.full_name || "Unknown"}
+                    title={user.name ?? user.email ?? "Unknown"}>
+                    {user.name ?? user.email ?? "Unknown"}
                   </span>
                 </CommandItem>
               ))}
