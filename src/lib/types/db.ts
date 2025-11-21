@@ -6,3 +6,4 @@ export type UserData = Tables<"UserData">;
 export type FullUserData = User & UserData;
 export type OutreachEvent = Tables<"OutreachEvents">;
 export type OutreachSession = Tables<"OutreachSessions">;
+export type FeatureFlags = Tables<"FeatureFlags">;

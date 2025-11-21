@@ -18,7 +18,7 @@ import {
   type ObjectFlagFormValues,
   flagRoleOptions
 } from "./flag-schemas";
-import { updateFlagAction, type FlagRecord } from "./actions";
+import { updateFlagAction } from "./actions";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,9 +41,10 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { FeatureFlags } from "@/lib/types/db";
 
 interface FlagsTabProps {
-  initialFlags: FlagRecord[];
+  initialFlags: FeatureFlags[];
 }
 
 type RoleOption = (typeof flagRoleOptions)[number];
@@ -55,7 +56,7 @@ export default function FlagsTab({ initialFlags }: FlagsTabProps) {
     setFlags(initialFlags);
   }, [initialFlags]);
 
-  const handleFlagUpdated = useCallback((updated: FlagRecord) => {
+  const handleFlagUpdated = useCallback((updated: FeatureFlags) => {
     setFlags((prev) =>
       prev.map((flag) => (flag.id === updated.id ? updated : flag))
     );
@@ -88,8 +89,8 @@ export default function FlagsTab({ initialFlags }: FlagsTabProps) {
 }
 
 interface FlagCardProps {
-  record: FlagRecord;
-  onFlagUpdated: (flag: FlagRecord) => void;
+  record: FeatureFlags;
+  onFlagUpdated: (flag: FeatureFlags) => void;
 }
 
 function FlagCard({ record, onFlagUpdated }: FlagCardProps) {
@@ -153,7 +154,6 @@ function BooleanFlagCard({ record, onFlagUpdated }: FlagCardProps) {
           <p className="text-sm text-muted-foreground">
             Current state: {checked ? "Enabled" : "Disabled"}
           </p>
-          <TimestampMeta created={record.created} updated={record.updated} />
         </div>
         <Switch
           checked={checked}
@@ -357,10 +357,8 @@ function ObjectFlagCard({ record, onFlagUpdated }: FlagCardProps) {
               )}
             />
           </div>
-
-          <TimestampMeta created={record.created} updated={record.updated} />
         </CardContent>
-        <CardFooter className="justify-end gap-3 border-t pt-4">
+        <CardFooter className="justify-end gap-3 pt-4">
           <Button
             type="button"
             variant="outline"
@@ -434,26 +432,8 @@ function filterRoles(roles?: string[]): RoleOption[] {
 function formatFlagName(name: FlagNames) {
   return name
     .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .map((part) => part.toUpperCase())
     .join(" ");
-}
-
-function TimestampMeta({
-  created,
-  updated
-}: {
-  created: string;
-  updated: string;
-}) {
-  return (
-    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-      <span>Created {formatTimestamp(created)}</span>
-      <span className="hidden sm:inline" aria-hidden="true">
-        •
-      </span>
-      <span>Last updated {formatTimestamp(updated)}</span>
-    </div>
-  );
 }
 
 function formatTimestamp(value: string) {

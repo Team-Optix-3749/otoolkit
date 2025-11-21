@@ -41,19 +41,19 @@ export type Database = {
     Tables: {
       FeatureFlags: {
         Row: {
-          flag: Json | null;
+          flag: Json;
           id: number;
-          name: string | null;
+          name: string;
         };
         Insert: {
-          flag?: Json | null;
+          flag?: Json;
           id?: number;
-          name?: string | null;
+          name?: string;
         };
         Update: {
-          flag?: Json | null;
+          flag?: Json;
           id?: number;
-          name?: string | null;
+          name?: string;
         };
         Relationships: [];
       };

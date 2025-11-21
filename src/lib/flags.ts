@@ -2,11 +2,10 @@
 
 import murmur from "murmurhash";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
 import type { Database } from "@/lib/types/supabase";
-import { getSBServerClient } from "./supabase/sbServer";
 
 import { EvalRet, FeatureFlag, FlagNames, FlagParams } from "./types/flags";
+import { getSBBrowserClient } from "./supabase/sbClient";
 
 type FeatureFlagRow = Database["public"]["Tables"]["FeatureFlags"]["Row"];
 
@@ -19,10 +18,13 @@ export async function runFlag(
   client: SupabaseClient,
   params?: FlagParams
 ): Promise<EvalRet> {
-  const flag = await fetchFlag(
-    flagName,
-    client || getSBServerClient(await cookies())
-  );
+  let clientToUse = client;
+
+  if (clientToUse === undefined) {
+    clientToUse = getSBBrowserClient();
+  }
+
+  const flag = await fetchFlag(flagName, clientToUse);
 
   if (flag === undefined) {
     return { enabled: false, value: undefined, exists: false };
@@ -134,7 +136,7 @@ function validateFlag(
   }
 }
 
-runFlag("flag_ttl_ms", getSBServerClient(await cookies())).then((res) => {
+runFlag("flag_ttl_ms", getSBBrowserClient()).then((res) => {
   if (res.exists && res.enabled && typeof res.value === "number") {
     FLAG_TTL_MS = res.value;
     console.warn(`[Flags] Using flag TTL of ${FLAG_TTL_MS} ms`);

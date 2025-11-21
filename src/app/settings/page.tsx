@@ -16,13 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import FlagsTab from "./FlagsTab";
-import type { FlagRecord } from "./actions";
-import type { FeatureFlag } from "@/lib/types/flags";
-import type { FullUserData } from "@/lib/types/db";
+import type { FeatureFlags, FullUserData } from "@/lib/types/db";
 import type { Tables } from "@/lib/types/supabase";
 import UserAvatar from "@/components/UserAvatar";
 import { useUser } from "@/hooks/useUser";
 import { getSBBrowserClient } from "@/lib/supabase/sbClient";
+import { useIsMounted } from "@/hooks/useIsHydrated";
+import { useNavbar } from "@/hooks/useNavbar";
 
 type FeatureFlagRow = Tables<"FeatureFlags">;
 
@@ -31,18 +31,24 @@ export default function SettingsPage() {
   const supabase = useMemo(() => getSBBrowserClient(), []);
   const isAdmin = user?.role === "admin";
 
-  const [flags, setFlags] = useState<FlagRecord[]>([]);
+  const [flags, setFlags] = useState<FeatureFlags[]>([]);
   const [isFlagsLoading, setIsFlagsLoading] = useState(false);
   const [flagError, setFlagError] = useState<string | null>(null);
 
-  const mountedRef = useRef(true);
+  const { setMobileNavbarSide } = useNavbar();
+  const isMounted = useIsMounted();
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    mountedRef.current = true;
+    isMountedRef.current = true;
     return () => {
-      mountedRef.current = false;
+      isMountedRef.current = false;
     };
   }, []);
+
+  useEffect(() => {
+    setMobileNavbarSide("right");
+  }, [setMobileNavbarSide]);
 
   const loadFlags = useCallback(async () => {
     if (!isAdmin) {
@@ -52,6 +58,8 @@ export default function SettingsPage() {
       return;
     }
 
+    if (!isMounted) return;
+
     setIsFlagsLoading(true);
     setFlagError(null);
 
@@ -60,7 +68,7 @@ export default function SettingsPage() {
       .select("*")
       .order("name", { ascending: true });
 
-    if (!mountedRef.current) return;
+    if (!isMountedRef.current) return;
 
     if (error || !data) {
       setFlags([]);
@@ -73,7 +81,7 @@ export default function SettingsPage() {
 
     setFlags(data.map((row) => mapRowToFlagRecord(row)));
     setIsFlagsLoading(false);
-  }, [isAdmin, supabase]);
+  }, [isAdmin, isMounted, supabase]);
 
   useEffect(() => {
     loadFlags();
@@ -82,7 +90,7 @@ export default function SettingsPage() {
   const showFlagsTab = Boolean(isAdmin);
 
   return (
-    <div className="container mx-auto max-w-5xl space-y-8 py-10">
+    <div className="container mx-auto max-w-5xl space-y-8 px-4 py-10 sm:px-6 lg:px-0">
       <header className="space-y-3">
         <div>
           <p className="text-sm uppercase tracking-wide text-muted-foreground">
@@ -100,7 +108,7 @@ export default function SettingsPage() {
         <TabsList className="w-fit">
           <TabsTrigger value="user">Profile</TabsTrigger>
           {showFlagsTab && (
-            <TabsTrigger value="flags">Feature flags</TabsTrigger>
+            <TabsTrigger value="flags">Feature Flags</TabsTrigger>
           )}
         </TabsList>
 
@@ -214,10 +222,10 @@ function UserDetailsCard({ user, isLoading }: UserDetailsCardProps) {
             </dd>
           </div>
           <div className="rounded-lg border bg-muted/20 p-4">
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+            <dt className="text-lg uppercase tracking-wide text-muted-foreground">
               User ID
             </dt>
-            <dd className="text-lg font-semibold truncate">{user.id ?? "—"}</dd>
+            <dd className="text-sm wrap-break-word">{user.id ?? "—"}</dd>
           </div>
         </dl>
       </CardContent>
@@ -226,7 +234,7 @@ function UserDetailsCard({ user, isLoading }: UserDetailsCardProps) {
 }
 
 type FlagsPanelProps = {
-  flags: FlagRecord[];
+  flags: FeatureFlags[];
   isLoading: boolean;
   error: string | null;
   onRetry: () => void;
@@ -277,13 +285,11 @@ function FlagsPanel({ flags, isLoading, error, onRetry }: FlagsPanelProps) {
   return <FlagsTab initialFlags={flags} />;
 }
 
-function mapRowToFlagRecord(row: FeatureFlagRow): FlagRecord {
+function mapRowToFlagRecord(row: FeatureFlagRow): FeatureFlags {
   return {
     id: row.id ?? 0,
-    name: (row.name ?? "") as FlagRecord["name"],
-    flag: (row.flag as FeatureFlag) ?? false,
-    created: "",
-    updated: ""
+    name: (row.name ?? "") as FeatureFlags["name"],
+    flag: (row.flag as FeatureFlags["flag"]) ?? false
   };
 }
 

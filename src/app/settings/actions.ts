@@ -3,11 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { logger } from "@/lib/logger";
-import type { FeatureFlag, FlagNames } from "@/lib/types/flags";
-import type { Tables } from "@/lib/types/supabase";
-import type { UserData } from "@/lib/types/db";
-
-type FeatureFlagModel = Tables<"FeatureFlags">;
+import type { FeatureFlag } from "@/lib/types/flags";
+import type { FeatureFlags, UserData } from "@/lib/types/db";
 
 import {
   flagRoleOptions,
@@ -17,16 +14,8 @@ import {
 import { getSBBrowserClient } from "@/lib/supabase/sbClient";
 import { makeSBRequest } from "@/lib/supabase/supabase";
 
-export type FlagRecord = {
-  id: number;
-  name: FlagNames;
-  flag: FeatureFlag;
-  created: string;
-  updated: string;
-};
-
 export type UpdateFlagActionResult =
-  | { success: true; flag: FlagRecord }
+  | { success: true; flag: FeatureFlags }
   | { success: false; error: string };
 
 export async function updateFlagAction(
@@ -98,22 +87,15 @@ export async function updateFlagAction(
 
   return {
     success: true,
-    flag: mapModelToRecord(updated as FeatureFlagModel)
+    flag: mapModelToRecord(updated as FeatureFlags)
   };
 }
 
-function mapModelToRecord(model: FeatureFlagModel): FlagRecord {
-  const row = model as unknown as {
-    id?: number;
-    name?: string | null;
-    flag?: unknown;
-  };
+function mapModelToRecord(model: Partial<FeatureFlags>): FeatureFlags {
   return {
-    id: row.id ?? 0,
-    name: row.name ?? "",
-    flag: row.flag as unknown as FeatureFlag,
-    created: "",
-    updated: ""
+    id: model.id ?? 0,
+    name: model.name ?? "",
+    flag: model.flag as unknown as FeatureFlag
   };
 }
 
