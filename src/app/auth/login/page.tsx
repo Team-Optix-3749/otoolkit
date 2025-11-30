@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
 import { loginEmailPass, loginOAuth } from "@/lib/auth";
-import { BaseStates, LoginStates } from "@/lib/types/states";
+import { BaseStates, LoginStates, stateToMessage } from "@/lib/types/states";
 import { logger } from "@/lib/logger";
 
 import Image from "next/image";
@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PasswordBlock from "../PasswordBlock";
 import SkeletonLoginForm from "./SkeletonLoginForm";
+import { safeParseSearchParams } from "@/lib/utils";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -32,15 +33,19 @@ export default function LoginForm() {
   const [redirectRoute, setRedirectRoute] = useState("/");
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setRedirectRoute(params.get("redirect") || "/");
+    const params = safeParseSearchParams(window.location.search);
+    const redirect = params?.get("redirect");
+
+    if (redirect?.startsWith("/") && !redirect.startsWith("//")) {
+      setRedirectRoute(redirect);
+    }
   }, []);
 
   const runRedirect = useCallback(() => {
     console.log("Redirecting to:", redirectRoute);
 
     toast.dismiss();
-    // router.push(redirectRoute);
+    router.push(redirectRoute);
   }, [router, redirectRoute]);
 
   const handleOAuth = async function (type: "discord" | "google") {
@@ -48,13 +53,15 @@ export default function LoginForm() {
       id: "oAuthLoader"
     });
 
-    const state = await loginOAuth(type);
+    const state = await loginOAuth(
+      type,
+      new URL(window.location.origin + redirectRoute)
+    );
 
     switch (state) {
       case BaseStates.SUCCESS:
         toast.success("Login successful!", { id: "oAuthLoader" });
         logger.info({ provider: type }, "OAuth login successful");
-        runRedirect();
         break;
       case BaseStates.ERROR:
       default:
@@ -89,7 +96,7 @@ export default function LoginForm() {
           runRedirect();
           break;
         default:
-          toast.error(state, {
+          toast.error(stateToMessage(state), {
             id: "sLoader"
           });
           break;

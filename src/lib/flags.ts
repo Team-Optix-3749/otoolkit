@@ -10,6 +10,21 @@ import { getSBBrowserClient } from "./supabase/sbClient";
 type FeatureFlagRow = Database["public"]["Tables"]["FeatureFlags"]["Row"];
 
 let FLAG_TTL_MS = 60000;
+let initialized = false;
+
+function initializeFlags() {
+  if (initialized) return;
+
+  runFlag("flag_ttl_ms", getSBBrowserClient()).then((res) => {
+    if (res.exists && res.enabled && typeof res.value === "number") {
+      FLAG_TTL_MS = res.value;
+      console.warn(`[Flags] Using flag TTL of ${FLAG_TTL_MS} ms`);
+    } else {
+      console.warn(`[Flags] Using default flag TTL of ${FLAG_TTL_MS} ms`);
+    }
+  });
+  initialized = true;
+}
 
 const flagsCache: Record<string, { flag: FeatureFlag; storedAt: number }> = {};
 
@@ -18,6 +33,7 @@ export async function runFlag(
   client: SupabaseClient,
   params?: FlagParams
 ): Promise<EvalRet> {
+  initializeFlags();
   let clientToUse = client;
 
   if (clientToUse === undefined) {
@@ -135,12 +151,3 @@ function validateFlag(
       };
   }
 }
-
-runFlag("flag_ttl_ms", getSBBrowserClient()).then((res) => {
-  if (res.exists && res.enabled && typeof res.value === "number") {
-    FLAG_TTL_MS = res.value;
-    console.warn(`[Flags] Using flag TTL of ${FLAG_TTL_MS} ms`);
-  } else {
-    console.warn(`[Flags] Using default flag TTL of ${FLAG_TTL_MS} ms`);
-  }
-});

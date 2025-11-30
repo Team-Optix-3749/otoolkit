@@ -49,10 +49,7 @@ export default function EditUserDialog({
     return mode === "add" ? magnitude : -magnitude;
   }, [adjustment, mode]);
 
-  const projectedTotal = Math.max(
-    0,
-    (userData.outreach_minutes || 0) + signedAdjustment
-  );
+  const projectedTotal = (userData.outreach_minutes || 0) + signedAdjustment;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,7 +75,7 @@ export default function EditUserDialog({
     switch (state) {
       case BaseStates.SUCCESS:
         toast.success(
-          `${displayName} now has ${formatMinutes(projectedTotal)}`
+          `${displayName} now has ${formatMinutes(Math.max(0, projectedTotal))}`
         );
         setOpen(false);
         refreshFunc?.();
@@ -120,7 +117,7 @@ export default function EditUserDialog({
           <div>
             {/** display current user formatted hours */}
             <p className="text-xl">Current Logged Time:</p>
-            <p className="g text-xl text-muted-foreground">
+            <p className="text-xl text-muted-foreground">
               {formatMinutes(userData.outreach_minutes || 0)}
             </p>
           </div>

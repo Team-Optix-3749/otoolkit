@@ -412,9 +412,7 @@ function formValuesToFeatureFlag(
 
   return {
     enabled: values.enabled,
-    ...(percentNumber !== undefined
-      ? { percent: Number(percentNumber.toFixed(6)) }
-      : {}),
+    ...(percentNumber !== undefined ? { percent: percentNumber } : {}),
     ...(roles && roles.length > 0 ? { roles } : {}),
     ...(resolvedValue !== undefined ? { value: resolvedValue } : {}),
     paramEvalMethod: values.paramEvalMethod,

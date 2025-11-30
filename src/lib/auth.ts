@@ -37,7 +37,7 @@ export async function loginEmailPass(
     error: Partial<AuthApiError> | null;
   } = await supabase.auth.signInWithPassword({
     email: trimmedEmail,
-    password
+    password,
   });
 
   console.log({ error });
@@ -52,11 +52,14 @@ export async function loginEmailPass(
   return LoginStates.SUCCESS;
 }
 
-export async function loginOAuth(provider: "google" | "discord") {
+export async function loginOAuth(provider: "google" | "discord", redirectRoute?: URL): Promise<BaseStates> {
   const supabase = getSBBrowserClient();
 
   const { error } = await supabase.auth.signInWithOAuth({
-    provider
+    provider,
+    options: {
+      redirectTo: redirectRoute?.toString()
+    }
   });
 
   if (error) {

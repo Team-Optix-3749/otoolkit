@@ -116,7 +116,10 @@ function mwRedirect(
   const redirectUrl = new URL(pathname, url);
   redirectUrl.search = searchParams.toString();
 
-  return NextResponse.redirect(redirectUrl);
+  const redirect = NextResponse.redirect(redirectUrl);
+  response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+
+  return redirect;
 }
 
 export const config = {

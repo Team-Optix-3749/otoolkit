@@ -494,9 +494,7 @@ function UserCombobox({
             {currentUser ? (
               <>
                 <UserIcon className="h-4 w-4 opacity-70" />
-                <span
-                  className="truncate"
-                  title={fallbackDisplay}>
+                <span className="truncate" title={fallbackDisplay}>
                   {fallbackDisplay}
                 </span>
               </>
@@ -516,7 +514,7 @@ function UserCombobox({
               {users.map((user) => (
                 <CommandItem
                   key={user.user}
-                  value={user.name ?? user.email ?? user.user}
+                  value={`${user.name ?? ""} ${user.email ?? ""} ${user.user}`}
                   onSelect={() => {
                     onChange(user.user);
                     setOpen(false);
@@ -533,7 +531,7 @@ function UserCombobox({
                     {user.name ?? user.email ?? "Unknown"}
                   </span>
                 </CommandItem>
-              ))}
+              ))}{" "}
             </CommandGroup>
           </CommandList>
         </Command>

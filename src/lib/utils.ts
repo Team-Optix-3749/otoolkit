@@ -96,3 +96,16 @@ export function assertEnv(name: string, value: string | undefined) {
 
   return value;
 }
+
+export function safeParseSearchParams(
+  url: string
+): URLSearchParams | undefined {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.searchParams;
+  } catch {
+    if (url.startsWith("?")) {
+      return new URLSearchParams(url);
+    }
+  }
+}

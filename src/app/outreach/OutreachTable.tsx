@@ -27,7 +27,6 @@ type OutreachTableProps = {
   canManage: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
-  onUpdate: () => void;
   outreachMinutesCutoff: number;
   isMobile?: boolean;
   refetchData?: () => void; // Function to refetch data after edits
@@ -110,7 +109,9 @@ function sortUsersList(users: UserData[], config: SortConfig): UserData[] {
   return [...users].sort((a, b) => {
     switch (config.key) {
       case "user": {
-        return getUserSortValue(a).localeCompare(getUserSortValue(b)) * multiplier;
+        return (
+          getUserSortValue(a).localeCompare(getUserSortValue(b)) * multiplier
+        );
       }
       case "outreachMinutes": {
         const diff = (a.outreach_minutes ?? 0) - (b.outreach_minutes ?? 0);
@@ -244,9 +245,7 @@ export function OutreachTable({
                 <CardContent className="p-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <UserInfo
-                        user={userData}
-                      />
+                      <UserInfo user={userData} />
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
                       <Badge

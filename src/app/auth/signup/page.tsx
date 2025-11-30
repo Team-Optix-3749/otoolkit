@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
 import { loginOAuth, signupEmailPass } from "@/lib/auth";
-import { BaseStates, SignupStates } from "@/lib/types/states";
+import { BaseStates, SignupStates, stateToMessage } from "@/lib/types/states";
 import { logger } from "@/lib/logger";
 
 import Image from "next/image";
@@ -23,21 +23,30 @@ import { Label } from "@/components/ui/label";
 import PasswordBlock from "../PasswordBlock";
 import SkeletonSignupForm from "./SkeletonSignupForm";
 import Link from "next/link";
+import { safeParseSearchParams } from "@/lib/utils";
 
 export default function SignupForm() {
-  const { doMinimalRendering, setDefaultExpanded } = useNavbar();
+  const [redirectRoute, setRedirectRoute] = useState("/");
 
+  const { doMinimalRendering, setDefaultExpanded } = useNavbar();
   const router = useRouter();
   const isHydrated = useIsMounted();
 
-  const redirectToHome = useCallback(() => {
-    router.prefetch("/");
+  useEffect(() => {
+    const params = safeParseSearchParams(window.location.search);
+    const redirect = params?.get("redirect");
 
-    setTimeout(() => {
-      router.push("/");
-      toast.dismiss();
-    }, 300);
-  }, [router]);
+    if (redirect?.startsWith("/") && !redirect.startsWith("//")) {
+      setRedirectRoute(redirect);
+    }
+  }, []);
+
+  const runRedirect = useCallback(() => {
+    console.log("Redirecting to:", redirectRoute);
+
+    toast.dismiss();
+    router.push(redirectRoute);
+  }, [router, redirectRoute]);
 
   const handleOAuth = async function (type: "discord" | "google") {
     toast.loading("Continue on the popup ...", { id: "oAuthLoader" });
@@ -48,7 +57,7 @@ export default function SignupForm() {
       case BaseStates.SUCCESS:
         toast.success("Login successful!", { id: "oAuthLoader" });
         logger.info({ provider: type }, "OAuth signup/login successful");
-        redirectToHome();
+        runRedirect();
         break;
       case BaseStates.ERROR:
       default:
@@ -75,27 +84,26 @@ export default function SignupForm() {
 
       name = name.trim();
       email = email.trim();
-
-      toast.dismiss();
-      toast.loading("Creating account...", { id: "aLoader" });
+      toast.success("Login successful!", { id: "aLoader" });
+      logger.info({ email }, "Password signup successful");
 
       let state = SignupStates.ERR_UNKNOWN;
       state = await signupEmailPass(email, password1, password2, name);
 
       switch (state) {
         case SignupStates.SUCCESS:
-          toast.success("Login successful!", { id: "sLoader" });
+          toast.success("Login successful!", { id: "aLoader" });
           logger.info({ email }, "Password login successful");
-          redirectToHome();
+          runRedirect();
           break;
         default:
-          toast.error(state, {
+          toast.error(stateToMessage(state), {
             id: "aLoader"
           });
           break;
       }
     },
-    [redirectToHome, router]
+    [runRedirect, router]
   );
 
   useEffect(() => {

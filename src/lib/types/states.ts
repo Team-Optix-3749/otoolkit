@@ -40,3 +40,75 @@ export const ErrorToString = {
   "01x404": "NOT_FOUND"
 } as const;
 export type ErrorCodes = keyof typeof ErrorToString;
+
+export function stateToMessage(
+  state: BaseStates | LoginStates | SignupStates | ErrorCodes
+): string {
+  if (state in BaseStates) {
+    switch (state) {
+      case BaseStates.SUCCESS:
+        return "Operation completed successfully.";
+      case BaseStates.ERROR:
+        return "An error occurred during the operation.";
+      case BaseStates.LOADING:
+        return "The operation is currently in progress.";
+    }
+  }
+
+  if (state in LoginStates) {
+    switch (state) {
+      case LoginStates.SUCCESS:
+        return "Login successful.";
+      case LoginStates.ERR_EMAIL_NOT_PROVIDED:
+        return "Email not provided.";
+      case LoginStates.ERR_PASSWORD_NOT_PROVIDED:
+        return "Password not provided.";
+      case LoginStates.ERR_INVALID_EMAIL:
+        return "Invalid email format.";
+      case LoginStates.ERR_PASSWORD_TOO_SHORT:
+        return "Password is too short.";
+      case LoginStates.ERR_UNKNOWN:
+        return "An unknown error occurred during login.";
+      case LoginStates.ERR_EMAIL_NOT_FOUND:
+        return "Email not found.";
+      case LoginStates.ERR_INCORRECT_PASSWORD:
+        return "Incorrect password.";
+      case LoginStates.ERR_USER_USES_OAUTH:
+        return "User uses OAuth for authentication.";
+    }
+  }
+
+  if (state in SignupStates) {
+    switch (state) {
+      case SignupStates.SUCCESS:
+        return "Signup successful.";
+      case SignupStates.ERR_EMAIL_NOT_PROVIDED:
+        return "Email not provided.";
+
+      case SignupStates.ERR_PASSWORD_NOT_PROVIDED:
+        return "Password not provided.";
+      case SignupStates.ERR_NAME_NOT_PROVIDED:
+        return "Name not provided.";
+      case SignupStates.ERR_PASSWORDS_DONT_MATCH:
+        return "Passwords do not match.";
+      case SignupStates.ERR_INVALID_EMAIL:
+        return "Invalid email format.";
+      case SignupStates.ERR_INVALID_NAME:
+        return "Invalid name format.";
+      case SignupStates.ERR_PASSWORD_TOO_SHORT:
+        return "Password is too short.";
+      case SignupStates.ERR_NAME_TOO_SHORT:
+        return "Name is too short.";
+      case SignupStates.ERR_ALREADY_EXISTS:
+        return "An account with this email already exists.";
+      case SignupStates.ERR_UNKNOWN:
+        return "An unknown error occurred during signup.";
+    }
+  }
+
+  if (state in ErrorToString) {
+    return `Error: ${ErrorToString[state as ErrorCodes]}.`;
+  }
+
+  return "Unknown Error.";
+}

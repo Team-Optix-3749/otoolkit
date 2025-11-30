@@ -73,8 +73,6 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
 
   const allUsers = data ? data.flatMap((page) => page.items) : [];
   const currentUserData = authUser;
-
-  const currentUser: User | null = authUser;
   const activityUserId = authUser?.id ?? null;
   const canManage = hasPermission(
     currentUserData?.role ?? null,
@@ -82,17 +80,19 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
   );
   const currentMinutes = currentUserData?.outreach_minutes ?? 0;
   const profileName =
-    currentUserData?.name ?? currentUser?.user_metadata?.full_name ?? "Unknown User";
-  const profileEmail = currentUserData?.email ?? currentUser?.email ?? "No email";
+    currentUserData?.name ??
+    currentUserData?.user_metadata?.full_name ??
+    "Unknown User";
+  const profileEmail =
+    currentUserData?.email ?? currentUserData?.email ?? "No email";
   const profileAvatar =
-    currentUserData?.avatar_url ?? getProfileImageUrl(currentUser) ?? undefined;
+    currentUserData?.avatar_url ??
+    getProfileImageUrl(currentUserData) ??
+    undefined;
   const progressPercent = outreachMinutesCutoff
     ? Math.min(100, Math.round((currentMinutes / outreachMinutesCutoff) * 100))
     : 0;
-  const minutesRemaining = Math.max(
-    0,
-    outreachMinutesCutoff - currentMinutes
-  );
+  const minutesRemaining = Math.max(0, outreachMinutesCutoff - currentMinutes);
   const totalItems = data?.[0]?.totalItems || 0;
   const hasMore = allUsers.length < totalItems;
   const isLoading = !data && !error;
@@ -103,10 +103,6 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
       setSize(size + 1);
     }
   }, [hasMore, isLoadingMore, setSize, size]);
-
-  const handleUpdate = useCallback(() => {
-    mutate();
-  }, [mutate]);
 
   const refetchData = useCallback(() => {
     mutate();
@@ -285,7 +281,6 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
           canManage={canManage}
           isLoading={isLoading}
           isLoadingMore={isLoadingMore || false}
-          onUpdate={handleUpdate}
           outreachMinutesCutoff={outreachMinutesCutoff}
           isMobile={isMobile}
           refetchData={refetchData}

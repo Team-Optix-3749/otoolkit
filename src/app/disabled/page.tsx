@@ -18,6 +18,9 @@ type Props = {
 export default async function DisabledPage({ searchParams }: Props) {
   const { page, message } = await searchParams;
 
+  const safePage =
+    page && page.startsWith("/") && !page.startsWith("//") ? page : "/";
+
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
       <div className="flex w-full max-w-md flex-col gap-6">
@@ -37,7 +40,7 @@ export default async function DisabledPage({ searchParams }: Props) {
           <CardContent>
             <div className="grid gap-4">
               <Button variant="outline" asChild className="w-full">
-                <Link href={page || "/"}>
+                <Link href={safePage}>
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Try Again
                 </Link>
@@ -58,13 +61,14 @@ export default async function DisabledPage({ searchParams }: Props) {
               <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
                 <span className="bg-card text-muted-foreground relative z-10 px-2">
                   Need assistance?
+                  <Button variant="outline" asChild className="w-full">
+                    <Link href="/support">
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      Contact Support
+                    </Link>
+                  </Button>
                 </span>
               </div>
-
-              <Button variant="outline" className="w-full">
-                <MessageCircle className="mr-2 h-4 w-4" />
-                Contact Support
-              </Button>
             </div>
 
             <div className="mt-6 text-center">

@@ -1,11 +1,6 @@
 import { makeSBRequest } from "../supabase/supabase";
 import { BaseStates } from "@/lib/types/states";
 
-type UserDataRow = {
-  id: number;
-  outreach_minutes: number;
-};
-
 export async function manualModifyOutreachHours(
   userId: string,
   deltaMinutes: number
@@ -14,47 +9,23 @@ export async function manualModifyOutreachHours(
     return BaseStates.ERROR;
   }
 
-  try {
-    const { data, error } = await makeSBRequest(async (sb) =>
-      sb
-        .from("UserData")
-        .select("outreach_minutes")
-        .eq("user", userId)
-        .maybeSingle<UserDataRow>()
-    );
-
-    if (error) {
-      return BaseStates.ERROR;
-    }
-
-    if (!data) {
-      if (deltaMinutes < 0) {
-        return BaseStates.ERROR;
-      }
-
-      const { error: insertError } = await makeSBRequest(async (sb) =>
-        sb.from("UserData").upsert({
+  const { data, error } = await makeSBRequest(async (sb) =>
+    sb
+      .from("OutreachSessions")
+      .upsert(
+        {
           user: userId,
-          outreach_minutes: deltaMinutes,
-          outreach_events: 0
-        })
-      );
+          event: "ManualHours",
+          minutes: deltaMinutes
+        },
+        { onConflict: "user,event" }
+      )
+      .select()
+  );
 
-      return insertError ? BaseStates.ERROR : BaseStates.SUCCESS;
-    }
-
-    const currentMinutes = data.outreach_minutes ?? 0;
-    const nextMinutes = Math.max(0, currentMinutes + deltaMinutes);
-
-    const { error: updateError } = await makeSBRequest(async (sb) =>
-      sb
-        .from("UserData")
-        .update({ outreach_minutes: nextMinutes })
-        .eq("id", (data as unknown as UserDataRow)?.id)
-    );
-
-    return updateError ? BaseStates.ERROR : BaseStates.SUCCESS;
-  } catch {
+  if (error) {
     return BaseStates.ERROR;
   }
+
+  return BaseStates.SUCCESS;
 }
