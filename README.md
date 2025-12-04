@@ -59,8 +59,8 @@ Our comprehensive solution for tracking everything!
    NEXT_PUBLIC_PB_URL=http://localhost:30090
 
    # Supabase (in-progress migration)
-   SUPABASE_URL=http://localhost:8000
-   SUPABASE_ANON_KEY=your-local-anon-key
+   NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-local-anon-key
    SUPABASE_SERVICE_ROLE_KEY=your-local-service-role-key
    ```
 

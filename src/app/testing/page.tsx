@@ -1,6 +1,6 @@
 "use server";
 
-import { getSBBrowserClient } from "@/lib/supabase/sbClient";
+import { getSBBrowserClient } from "@/lib/db/supabase/sbClient";
 
 export default async function Testing({}) {
   const supabase = getSBBrowserClient();

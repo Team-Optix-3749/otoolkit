@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { hasPermission } from "./lib/permissions";
 import { runFlag } from "./lib/flags";
-import { getSBServerClient } from "./lib/supabase/sbServer";
+import { getSBServerClient } from "./lib/db/supabase/sbServer";
 import { UserData } from "./lib/types/db";
 import { createServerClient } from "@supabase/ssr";
 

@@ -33,7 +33,7 @@ import {
 
 import { Separator } from "@/components/ui/separator";
 import type { FullUserData, User } from "@/lib/types/db";
-import { getProfileImageUrl } from "@/lib/supabase/supabase";
+import { getProfileImageUrl } from "@/lib/db/supabase/supabase";
 
 type NavItem = {
   showInMinimal?: boolean;

@@ -23,7 +23,7 @@ import ActivityGraph from "./ActivityGraph";
 import { Users, Clock, TrendingUp, Calendar } from "lucide-react";
 import type { User, UserData } from "@/lib/types/db";
 import { fetchUserDataPaginated } from "@/lib/db/user";
-import { getProfileImageUrl } from "@/lib/supabase/supabase";
+import { getProfileImageUrl } from "@/lib/db/supabase/supabase";
 
 const PAGE_SIZE = 15;
 

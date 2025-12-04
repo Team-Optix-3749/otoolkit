@@ -1,6 +1,6 @@
 import { BaseStates, LoginStates, SignupStates } from "./types/states";
 import { logger } from "./logger";
-import { getSBBrowserClient } from "./supabase/sbClient";
+import { getSBBrowserClient } from "./db/supabase/sbClient";
 import { AuthApiError } from "@supabase/supabase-js";
 
 function validateEmail(value: string) {

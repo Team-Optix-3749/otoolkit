@@ -5,25 +5,27 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/supabase";
 
 import { EvalRet, FeatureFlag, FlagNames, FlagParams } from "./types/flags";
-import { getSBBrowserClient } from "./supabase/sbClient";
+import { getSBBrowserClient } from "./db/supabase/sbClient";
+import { logger } from "./logger";
 
 type FeatureFlagRow = Database["public"]["Tables"]["FeatureFlags"]["Row"];
 
 let FLAG_TTL_MS = 60000;
+
 let initialized = false;
 
 function initializeFlags() {
   if (initialized) return;
+  initialized = true;
 
   runFlag("flag_ttl_ms", getSBBrowserClient()).then((res) => {
     if (res.exists && res.enabled && typeof res.value === "number") {
       FLAG_TTL_MS = res.value;
-      console.warn(`[Flags] Using flag TTL of ${FLAG_TTL_MS} ms`);
+      logger.info(`[Flags] Using flag TTL of ${FLAG_TTL_MS} ms`);
     } else {
-      console.warn(`[Flags] Using default flag TTL of ${FLAG_TTL_MS} ms`);
+      logger.warn(`[Flags] Using default flag TTL of ${FLAG_TTL_MS} ms`);
     }
   });
-  initialized = true;
 }
 
 const flagsCache: Record<string, { flag: FeatureFlag; storedAt: number }> = {};
