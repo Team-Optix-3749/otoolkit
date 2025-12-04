@@ -24,6 +24,7 @@ import { Users, Clock, TrendingUp, Calendar } from "lucide-react";
 import type { User, UserData } from "@/lib/types/db";
 import { fetchUserDataPaginated } from "@/lib/db/user";
 import { getProfileImageUrl } from "@/lib/db/supabase/supabase";
+import { logger } from "@/lib/logger";
 
 const PAGE_SIZE = 15;
 
@@ -120,7 +121,7 @@ export default function OutreachPage({ outreachMinutesCutoff }: Props) {
     );
 
   if (error) {
-    console.error("Error loading outreach data:", error);
+    logger.error("Error loading outreach data:", error);
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">

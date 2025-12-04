@@ -42,8 +42,6 @@ export default function LoginForm() {
   }, []);
 
   const runRedirect = useCallback(() => {
-    console.log("Redirecting to:", redirectRoute);
-
     toast.dismiss();
     router.push(redirectRoute);
   }, [router, redirectRoute]);
@@ -87,7 +85,7 @@ export default function LoginForm() {
       toast.dismiss();
       toast.loading("Logging In ...", { id: "sLoader" });
 
-      let state = await loginEmailPass(email, password);
+      const state = await loginEmailPass(email, password);
 
       switch (state) {
         case LoginStates.SUCCESS:

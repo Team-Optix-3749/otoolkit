@@ -24,7 +24,7 @@ export default function ServerToaster({
       duration,
       action
     });
-  }, [message, type, duration]);
+  }, [message, type, duration, action]);
 
   return null;
 }

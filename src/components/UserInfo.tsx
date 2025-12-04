@@ -14,8 +14,6 @@ type UserInfoProps = Partial<{
 export function UserInfo({ user, userId }: UserInfoProps) {
   const [userData, setUserData] = useState<MinimalUserData | undefined>(user);
 
-  console.log("UserInfo render", { user, userId, userData });
-
   useEffect(() => {
     if(userId) {
       (async () => {

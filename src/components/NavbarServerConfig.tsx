@@ -8,14 +8,19 @@ type Props = {
 };
 
 export function NavbarServerConfig({ ...props }: Props) {
-  const navbar = useNavbar();
+  const { setDefaultExpanded, doMinimalRendering } = useNavbar();
   useEffect(() => {
     if (props.setDefaultExpanded !== undefined) {
-      navbar.setDefaultExpanded(props.setDefaultExpanded);
+      setDefaultExpanded(props.setDefaultExpanded);
     }
     if (props.doMinimalRendering !== undefined) {
-      navbar.doMinimalRendering(props.doMinimalRendering);
+      doMinimalRendering(props.doMinimalRendering);
     }
-  }, [props.setDefaultExpanded, props.doMinimalRendering]);
+  }, [
+    props.setDefaultExpanded,
+    props.doMinimalRendering,
+    setDefaultExpanded,
+    doMinimalRendering
+  ]);
   return null;
 }

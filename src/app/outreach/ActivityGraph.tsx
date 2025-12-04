@@ -19,6 +19,7 @@ type ChartData = {
 
 type OutreachActivityGraphProps = {
   id: string;
+  prefetchedDates?: string[];
 };
 
 const PRE_FORMATTED_DATA = {
@@ -36,7 +37,10 @@ const PRE_FORMATTED_DATA = {
   Dec: 0
 };
 
-export default function ActivityGraph({ id }: OutreachActivityGraphProps) {
+export default function ActivityGraph({
+  id,
+  prefetchedDates
+}: OutreachActivityGraphProps) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const [chartData, setChartData] = useState<ChartData>([]);
@@ -62,8 +66,17 @@ export default function ActivityGraph({ id }: OutreachActivityGraphProps) {
   };
 
   useEffect(() => {
+    if (prefetchedDates && prefetchedDates.length) {
+      setChartData(processTimestamps(prefetchedDates));
+      return;
+    }
+
+    let isMounted = true;
+
     (async () => {
       const [error, timestamps] = await fetchUserSessionEventDates(id);
+
+      if (!isMounted) return;
 
       if (error || !timestamps) {
         setChartData([]);
@@ -74,7 +87,11 @@ export default function ActivityGraph({ id }: OutreachActivityGraphProps) {
 
       setChartData(data);
     })();
-  }, [id]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, prefetchedDates]);
 
   useEffect(() => {
     if (chartData.length) {

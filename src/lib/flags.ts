@@ -69,7 +69,7 @@ async function fetchFlag(
     .maybeSingle();
 
   if (error) {
-    console.warn(`[Flags] Failed to fetch flag ${flagName}:`, error.message);
+    logger.error(error, `[Flags] Failed to fetch flag ${flagName}:`);
     return undefined;
   }
 
