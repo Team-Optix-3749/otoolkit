@@ -1,54 +1,137 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PBServer } from "./lib/pb";
-import { getPBAuthCookieWithGetter } from "./lib/pbServerUtils";
 
-const adminOnlyRoutes = ["/admin", "/testing", "/outreach/manage"];
-const authedOnlyRoutes = [
-  "/dashboard",
-  "/profile",
-  "/settings",
-  "/outreach",
-  "/build",
-  "/scouting"
-];
-// const publicPaths = ["/auth/unauthorized", "/auth/login", "/auth/signup"];
+import { hasPermission } from "./lib/permissions";
+import { runFlag } from "./lib/flags";
+import { getSBServerClient } from "./lib/db/supabase/sbServer";
+import { UserData } from "./lib/types/db";
+import { createServerClient } from "@supabase/ssr";
+
+const ROUTE_PERMISSIONS: Partial<
+  Record<string, Parameters<typeof hasPermission>[1]>
+> = {
+  outreach: "outreach:view",
+  scouting: "scouting:view",
+  settings: "settings:view"
+};
+
+const FLAG_EXEMPT_PAGES = new Set(["settings"]);
 
 export async function middleware(request: NextRequest) {
-  const nextUrl = request.nextUrl.clone();
+  const originalPath = request.nextUrl.pathname;
+  const segments = originalPath.split("/").filter(Boolean);
+  const page = segments.at(0);
 
-  // if (publicPaths.includes(nextUrl.pathname)) {
-  //   return NextResponse.next();
-  // }
+  let response = NextResponse.next({
+    request
+  });
 
-  if (![...authedOnlyRoutes, ...adminOnlyRoutes].includes(nextUrl.pathname))
-    return NextResponse.next();
+  const supabase = getSBServerClient({
+    getAll: () => {
+      return request.cookies.getAll();
+    },
+    setAll(cookiesToSet) {
+      cookiesToSet.forEach(({ name, value }) =>
+        request.cookies.set(name, value)
+      );
+      response = NextResponse.next({
+        request
+      });
+      cookiesToSet.forEach(({ name, value, options }) =>
+        response.cookies.set(name, value, options)
+      );
+    }
+  });
 
-  const pbAuthCookie = await getPBAuthCookieWithGetter((key: string) =>
-    request.cookies.get(key)
-  );
+  const claims = await supabase.auth.getClaims();
 
-  const pb = new PBServer(pbAuthCookie || "");
-  const record = pb.authStore.record;
-
-  if (!record) {
-    nextUrl.searchParams.set("redirect", nextUrl.pathname);
-    nextUrl.pathname = "/auth/login";
-
-    return NextResponse.redirect(nextUrl);
+  if (!page) {
+    return response;
   }
 
-  const role = record?.role || "guest";
+  let role: UserData["role"] = "guest";
+  let userId: string | undefined;
 
-  if (role === "admin") {
-    return NextResponse.next();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    userId = user.id;
+
+    const { data: userData } = await supabase
+      .from("UserData")
+      .select("role")
+      .eq("user", user.id)
+      .limit(1)
+      .single();
+
+    if (userData) {
+      role = userData.role;
+    }
   }
 
-  if (adminOnlyRoutes.includes(nextUrl.pathname)) {
-    nextUrl.searchParams.set("page", nextUrl.pathname);
-    nextUrl.pathname = "/auth/unauthorized";
+  const requiredPermission = ROUTE_PERMISSIONS[page];
+  if (requiredPermission && !hasPermission(role, requiredPermission)) {
+    if (user?.id) {
+      return mwRedirect(response, request.nextUrl.clone(), "/unauthorized", {
+        page: originalPath
+      });
+    }
 
-    return NextResponse.redirect(nextUrl);
+    return mwRedirect(response, request.nextUrl.clone(), "/auth/login", {
+      next: request.nextUrl.pathname
+    });
   }
 
-  return NextResponse.next();
+  if (FLAG_EXEMPT_PAGES.has(page)) return response;
+
+  const { exists, list, enabled } = await runFlag("disabled_pages", supabase, {
+    userRole: role,
+    userId
+  });
+
+  if (!exists || !enabled || !list || list.length === 0) return response;
+
+  if (list.includes(page)) {
+    return mwRedirect(response, request.nextUrl.clone(), "/disabled", {
+      page: originalPath,
+      reason: "feature_disabled"
+    });
+  }
+
+  return response;
 }
+
+function mwRedirect(
+  response: NextResponse,
+  url: URL,
+  pathname: string,
+  params: Record<string, string>
+) {
+  if (pathname === url.pathname) {
+    return response;
+  }
+
+  const searchParams = new URLSearchParams(params);
+  const redirectUrl = new URL(pathname, url);
+  redirectUrl.search = searchParams.toString();
+
+  const redirect = NextResponse.redirect(redirectUrl);
+  response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+
+  return redirect;
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - auth (authentication pages)
+     * - api (API routes)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|auth|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"
+  ]
+};

@@ -1,11 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 
-export function useIsHydrated() {
-  const isHydrated = useRef(false);
+export function useIsMounted() {
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    isHydrated.current = true;
+    setIsMounted(true);
   }, []);
 
-  return isHydrated;
+  return isMounted;
 }

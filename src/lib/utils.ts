@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import { ResponseCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { twMerge } from "tailwind-merge";
 
 export const ShortMonths = {
@@ -30,8 +31,6 @@ export const FullMonths = {
   November: 11,
   December: 12
 };
-
-
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -82,4 +81,31 @@ export function getBadgeStatusStyles(
   }
 
   return className;
+}
+
+type SearchParams = Record<string, string>;
+export function getSearchParamsString(params: SearchParams, basePath = "") {
+  const searchParams = new URLSearchParams(params);
+  return `${basePath}?${searchParams.toString()}`;
+}
+
+export function assertEnv(name: string, value: string | undefined) {
+  if (!value) {
+    throw new Error(`Missing ${name} environment variable. Got ${value}`);
+  }
+
+  return value;
+}
+
+export function safeParseSearchParams(
+  url: string
+): URLSearchParams | undefined {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.searchParams;
+  } catch {
+    if (url.startsWith("?")) {
+      return new URLSearchParams(url);
+    }
+  }
 }

@@ -58,7 +58,7 @@ export interface UnknownQuestionConfig extends BaseQuestionConfig {
     string,
     "select" | "number" | "boolean" | "slider" | "text" | "textarea"
   >;
-  [key: string]: any; // Allow additional properties for unknown types
+  [key: string]: unknown; // Allow additional properties for unknown types
 }
 
 export type ScoutingQuestionConfig =

@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { manualModifyOutreachHours } from "@/lib/db/hours";
-import { BaseStates } from "@/lib/states";
+import { BaseStates } from "@/lib/types/states";
 import { formatMinutes } from "@/lib/utils";
-import type { UserData } from "@/lib/types/pocketbase";
-import { PBBrowser } from "@/lib/pb";
+import type { UserData } from "@/lib/types/db";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -45,9 +44,9 @@ export default function AdjustHoursDialog({
   );
 
   const projectedTotal = useMemo(() => {
-    const next = (userData.outreachMinutes || 0) + deltaMinutes;
+    const next = (userData.outreach_minutes || 0) + deltaMinutes;
     return next < 0 ? 0 : next;
-  }, [deltaMinutes, userData.outreachMinutes]);
+  }, [deltaMinutes, userData.outreach_minutes]);
 
   const isDisabled = minutes <= 0 || submitting;
 
@@ -64,13 +63,13 @@ export default function AdjustHoursDialog({
     event.preventDefault();
     if (minutes <= 0 || submitting) return;
 
-    const userId = userData.expand?.user?.id;
+    const userId = userData.user;
     if (!userId) {
       toast.error("Cannot adjust hours: missing user reference");
       return;
     }
 
-    if (userData.outreachMinutes + deltaMinutes < 0) {
+    if (userData.outreach_minutes + deltaMinutes < 0) {
       toast.error("Adjustment would reduce this member below zero minutes.");
       return;
     }
@@ -78,9 +77,7 @@ export default function AdjustHoursDialog({
     setSubmitting(true);
     const result = await manualModifyOutreachHours(
       userId,
-      deltaMinutes,
-      PBBrowser.getInstance(),
-      reason.trim() || undefined
+      deltaMinutes
     );
 
     if (result === BaseStates.SUCCESS) {
@@ -89,7 +86,7 @@ export default function AdjustHoursDialog({
       )}`;
       toast.success(
         `${
-          userData.expand?.user?.name ?? "User"
+          userData.name ?? "User"
         } adjusted by ${adjustmentLabel}. New total: ${formatMinutes(
           projectedTotal
         )}`
@@ -185,7 +182,7 @@ export default function AdjustHoursDialog({
           <div className="grid gap-1 rounded-md border px-3 py-2 text-sm bg-muted/40">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Current total</span>
-              <span>{formatMinutes(userData.outreachMinutes || 0)}</span>
+              <span>{formatMinutes(userData.outreach_minutes || 0)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Adjustment</span>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useIsHydrated } from "@/hooks/useIsHydrated";
+import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
 import { loginEmailPass, loginOAuth } from "@/lib/auth";
-import { BaseStates, SimpleLoginStates } from "@/lib/states";
+import { BaseStates, LoginStates, stateToMessage } from "@/lib/types/states";
 import { logger } from "@/lib/logger";
 
 import Image from "next/image";
@@ -23,21 +23,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PasswordBlock from "../PasswordBlock";
 import SkeletonLoginForm from "./SkeletonLoginForm";
+import { safeParseSearchParams } from "@/lib/utils";
 
 export default function LoginForm() {
   const router = useRouter();
-
   const { doMinimalRendering, setDefaultExpanded } = useNavbar();
-  const isHydrated = useIsHydrated();
+  const isHydrated = useIsMounted();
 
-  const redirectRoute = useMemo(() => {
-    if (typeof window === "undefined") return "/";
-    return new URLSearchParams(window.location.search).get("redirect") || "/";
+  const [redirectRoute, setRedirectRoute] = useState("/");
+
+  useEffect(() => {
+    const params = safeParseSearchParams(window.location.search);
+    const redirect = params?.get("redirect");
+
+    if (redirect?.startsWith("/") && !redirect.startsWith("//")) {
+      setRedirectRoute(redirect);
+    }
   }, []);
 
-  const redirect = useCallback(() => {
-    console.log("Redirecting to:", redirectRoute);
-
+  const runRedirect = useCallback(() => {
     toast.dismiss();
     router.push(redirectRoute);
   }, [router, redirectRoute]);
@@ -46,13 +50,16 @@ export default function LoginForm() {
     toast.loading("Continue on the popup ...", {
       id: "oAuthLoader"
     });
-    const state = await loginOAuth(type);
+
+    const state = await loginOAuth(
+      type,
+      new URL(window.location.origin + redirectRoute)
+    );
 
     switch (state) {
       case BaseStates.SUCCESS:
         toast.success("Login successful!", { id: "oAuthLoader" });
         logger.info({ provider: type }, "OAuth login successful");
-        redirect();
         break;
       case BaseStates.ERROR:
       default:
@@ -78,62 +85,27 @@ export default function LoginForm() {
       toast.dismiss();
       toast.loading("Logging In ...", { id: "sLoader" });
 
-      let state = SimpleLoginStates.ERR_UNKNOWN;
-      state = await loginEmailPass(email, password);
+      const state = await loginEmailPass(email, password);
 
       switch (state) {
-        case SimpleLoginStates.SUCCESS:
+        case LoginStates.SUCCESS:
           toast.success("Login successful!", { id: "sLoader" });
           logger.info({ email }, "Password login successful");
-          redirect();
+          runRedirect();
           break;
-        case SimpleLoginStates.ERR_EMAIL_NOT_PROVIDED:
-          toast.error("Email is required.", { id: "sLoader" });
-          break;
-        case SimpleLoginStates.ERR_PASSWORD_NOT_PROVIDED:
-          toast.error("Password is required.", { id: "sLoader" });
-          break;
-        case SimpleLoginStates.ERR_INVALID_EMAIL:
-          toast.error("Please enter a valid email address.", { id: "sLoader" });
-          break;
-        case SimpleLoginStates.ERR_PASSWORD_TOO_SHORT:
-          toast.error("Password must be at least 8 characters long.", {
-            id: "sLoader"
-          });
-          break;
-        case SimpleLoginStates.ERR_EMAIL_NOT_FOUND:
-          toast.error("Email not found. Please check your email.", {
-            id: "sLoader"
-          });
-          break;
-        case SimpleLoginStates.ERR_INCORRECT_PASSWORD:
-          toast.error("Incorrect password. Please try again.", {
-            id: "sLoader"
-          });
-          break;
-        case SimpleLoginStates.ERR_USER_USES_OAUTH:
-          toast.error(
-            "Hmm... It looks like you signed up using OAuth. Please use Google or Discord to login."
-          );
-          break;
-        case SimpleLoginStates.ERR_UNKNOWN:
         default:
-          toast.error("Something went wrong. Please try again later.", {
+          toast.error(stateToMessage(state), {
             id: "sLoader"
           });
-          logger.error({ email }, "Unknown login error");
           break;
       }
     },
-    [redirect]
+    [runRedirect]
   );
 
   useEffect(() => {
     doMinimalRendering(true);
     setDefaultExpanded(false);
-
-    console.log("Prefetching route:", redirectRoute);
-    router.prefetch(redirectRoute);
 
     return () => {
       doMinimalRendering(false);

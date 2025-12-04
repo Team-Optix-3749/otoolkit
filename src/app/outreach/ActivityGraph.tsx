@@ -1,10 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { PBBrowser } from "@/lib/pb";
+import React, { useEffect, useState } from "react";
 import { fetchUserSessionEventDates } from "@/lib/db/outreach";
 import { ShortMonths } from "@/lib/utils";
-import { ErrorToString } from "@/lib/states";
 
 import { BarChart, Bar, XAxis, Cell } from "recharts";
 import {
@@ -76,10 +74,7 @@ export default function ActivityGraph({
     let isMounted = true;
 
     (async () => {
-      const [error, timestamps] = await fetchUserSessionEventDates(
-        id,
-        PBBrowser.getInstance()
-      );
+      const [error, timestamps] = await fetchUserSessionEventDates(id);
 
       if (!isMounted) return;
 

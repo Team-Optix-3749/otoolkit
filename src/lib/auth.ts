@@ -1,72 +1,76 @@
-import { BaseStates } from "./states";
-import { clearPBAuthCookie, setPBAuthCookie } from "./pbServerUtils";
-
-import { pb_OAuthProvider } from "./types/pocketbase";
-import { SimpleLoginStates, SignupStates } from "./states";
-import { newUser } from "./db/user";
+import { BaseStates, LoginStates, SignupStates } from "./types/states";
 import { logger } from "./logger";
-import { PBBrowser } from "./pb";
+import { getSBBrowserClient } from "./db/supabase/sbClient";
+import { AuthApiError } from "@supabase/supabase-js";
+
+function validateEmail(value: string) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(String(value).toLowerCase());
+}
+
+function validateName(value: string) {
+  const re = /^[A-Za-z0-9\s]+$/;
+  return re.test(String(value));
+}
 
 export async function loginEmailPass(
   email: string,
   password: string
-): Promise<SimpleLoginStates> {
-  if (!email) return SimpleLoginStates.ERR_EMAIL_NOT_PROVIDED;
-  if (!password) return SimpleLoginStates.ERR_PASSWORD_NOT_PROVIDED;
+): Promise<LoginStates> {
+  if (!email) return LoginStates.ERR_EMAIL_NOT_PROVIDED;
+  if (!password) return LoginStates.ERR_PASSWORD_NOT_PROVIDED;
 
-  email = email.trim();
-
-  const validateEmail = (value: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(String(value).toLowerCase());
-  };
-
-  if (!validateEmail(email)) {
-    return SimpleLoginStates.ERR_INVALID_EMAIL;
+  const trimmedEmail = email.trim();
+  if (!validateEmail(trimmedEmail)) {
+    return LoginStates.ERR_INVALID_EMAIL;
   }
 
   if (password.length < 8) {
-    return SimpleLoginStates.ERR_PASSWORD_TOO_SHORT;
+    return LoginStates.ERR_PASSWORD_TOO_SHORT;
   }
 
-  const usersCol = PBBrowser.getInstance().pbClient.collection("users");
+  const supabase = getSBBrowserClient();
 
-  try {
-    const user = await usersCol.getFirstListItem(`email="${email}"`);
+  const {
+    error
+  }: {
+    error: Partial<AuthApiError> | null;
+  } = await supabase.auth.signInWithPassword({
+    email: trimmedEmail,
+    password,
+  });
 
-    if (user.usesOAuth) {
-      return SimpleLoginStates.ERR_USER_USES_OAUTH;
-    }
-  } catch {
-    return SimpleLoginStates.ERR_EMAIL_NOT_FOUND;
+  console.log({ error });
+
+  if (error?.code === "invalid_credentials")
+    return LoginStates.ERR_INCORRECT_PASSWORD;
+
+  if (error) {
+    return LoginStates.ERR_UNKNOWN;
   }
 
-  try {
-    const authData = await usersCol.authWithPassword(email, password);
-
-    storeServerCookie();
-    if (authData.token) return SimpleLoginStates.SUCCESS;
-    else return SimpleLoginStates.ERR_UNKNOWN;
-  } catch (error) {
-    console.log("Login failed:", error);
-    return SimpleLoginStates.ERR_INCORRECT_PASSWORD;
-  }
+  return LoginStates.SUCCESS;
 }
 
-export async function loginOAuth(provider: pb_OAuthProvider) {
-  const authData = await PBBrowser.getInstance()
-    .pbClient.collection("users")
-    .authWithOAuth2({
-      provider,
-      createData: {
-        usesOAuth: true,
-        role: "member"
-      }
-    });
+export async function loginOAuth(provider: "google" | "discord", redirectRoute?: URL): Promise<BaseStates> {
+  const supabase = getSBBrowserClient();
 
-  storeServerCookie();
-  if (authData.token) return BaseStates.SUCCESS;
-  else return BaseStates.ERROR;
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: redirectRoute?.toString()
+    }
+  });
+
+  if (error) {
+    logger.error(
+      { provider, err: error.message },
+      "Supabase OAuth login failed"
+    );
+    return BaseStates.ERROR;
+  }
+
+  return BaseStates.SUCCESS;
 }
 
 export async function signupEmailPass(
@@ -80,25 +84,18 @@ export async function signupEmailPass(
   if (!password2) return SignupStates.ERR_PASSWORD_NOT_PROVIDED;
   if (!name) return SignupStates.ERR_NAME_NOT_PROVIDED;
 
-  const validateEmail = (value: string) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(String(value).toLowerCase());
-  };
+  const trimmedEmail = email.trim();
+  const trimmedName = name.trim();
 
-  const validateName = (value: string) => {
-    const re = /^[A-Za-z0-9]+$/;
-    return re.test(String(value).toLowerCase());
-  };
-
-  if (!validateEmail(email)) {
+  if (!validateEmail(trimmedEmail)) {
     return SignupStates.ERR_INVALID_EMAIL;
   }
 
-  if (name.length < 3) {
+  if (trimmedName.length < 3) {
     return SignupStates.ERR_NAME_TOO_SHORT;
   }
 
-  if (!validateName(name)) {
+  if (!validateName(trimmedName)) {
     return SignupStates.ERR_INVALID_NAME;
   }
 
@@ -110,31 +107,45 @@ export async function signupEmailPass(
     return SignupStates.ERR_PASSWORD_TOO_SHORT;
   }
 
-  const result = await newUser(email, password1, name, PBBrowser.getInstance());
+  const supabase = getSBBrowserClient();
 
-  if (result[0]) {
-    if (result[0] === "01x03") {
+  const { data, error } = await supabase.auth.signUp({
+    email: trimmedEmail,
+    password: password1,
+    options: {
+      data: {
+        name: trimmedName
+      }
+    }
+  });
+
+  if (error) {
+    if (error.code === "user_already_exists") {
       return SignupStates.ERR_ALREADY_EXISTS;
     }
-    logger.error({ email, code: result[0] }, "Unknown signup error");
+
+    logger.error(
+      { email: trimmedEmail, err: error.message },
+      "Supabase signup failed"
+    );
     return SignupStates.ERR_UNKNOWN;
   }
 
-  // Auto-login after successful signup
-  const loginResult = await loginEmailPass(email, password1);
-  if (loginResult === SimpleLoginStates.SUCCESS) {
+  const loginResult = await loginEmailPass(trimmedEmail, password1);
+  if (loginResult === LoginStates.SUCCESS) {
     return SignupStates.SUCCESS;
   }
 
   return SignupStates.ERR_UNKNOWN;
 }
 
-async function storeServerCookie() {
-  setPBAuthCookie(PBBrowser.getInstance().authStore.exportToCookie());
-}
+export async function logout() {
+  const supabase = getSBBrowserClient();
+  const { error } = await supabase.auth.signOut();
 
-export function logout() {
-  PBBrowser.getInstance().authStore.clear();
-  clearPBAuthCookie();
+  if (error) {
+    logger.error({ err: error.message }, "Supabase sign out failed");
+  }
+
   window?.location.reload();
 }

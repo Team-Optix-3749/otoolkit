@@ -1,9 +1,7 @@
 "use client";
 
 // React
-import { useCallback, useEffect, useState } from "react";
-import { recordToImageUrl } from "@/lib/pb";
-import type { UserData } from "@/lib/types/pocketbase";
+import { useEffect, useState } from "react";
 import { formatMinutes, formatPbDate, getBadgeStatusStyles } from "@/lib/utils";
 // UI
 import {
@@ -19,22 +17,33 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import AdjustHoursDialog from "@/app/outreach/AdjustHoursDialog";
+import EditUserDialog from "./EditUserDialog";
+import ManageEventsSheet from "@/app/outreach/manage/ManageEventsSheet";
+import type { UserData } from "@/lib/types/db";
+import { UserInfo } from "@/components/UserInfo";
 
 type OutreachTableProps = {
-  users: UserData[];
+  allUsers: UserData[];
   canManage: boolean;
   isLoading: boolean;
   isLoadingMore: boolean;
   outreachMinutesCutoff: number;
   isMobile?: boolean;
-  hasMore: boolean;
-  totalItems: number;
-  onLoadMoreAction?: () => void;
-  onReloadAction: () => void;
+  refetchData?: () => void; // Function to refetch data after edits
 };
 
-const SortedTableHeads = [
+type SortKey = "user" | "outreachMinutes" | "lastOutreachEvent";
+
+type TableHeadConfig = {
+  key: SortKey;
+  name: string;
+  descending: string;
+  ascending: string;
+  noSort: string;
+  isSortable: boolean;
+};
+
+const SortedTableHeads: readonly TableHeadConfig[] = [
   {
     key: "user",
     name: "User",
@@ -60,73 +69,106 @@ const SortedTableHeads = [
     isSortable: true
   }
 ];
+type SortDirection = "ascending" | "descending";
+
+type SortConfig = {
+  key: SortKey;
+  direction: SortDirection;
+};
+
+type ExtendedUserData = UserData & {
+  last_outreach_event?: string | null;
+  lastOutreachEvent?: string | null;
+};
+
+function getUserSortValue(user: UserData): string {
+  return (
+    user.name?.toLowerCase() ??
+    user.email?.toLowerCase() ??
+    user.user.toLowerCase()
+  );
+}
+
+function getLastOutreachDate(user: ExtendedUserData): string | null {
+  const snake = user.last_outreach_event;
+  if (typeof snake === "string" && snake.length) {
+    return snake;
+  }
+
+  const camel = user.lastOutreachEvent as string | null | undefined;
+  if (typeof camel === "string" && camel.length) {
+    return camel;
+  }
+
+  return user.created_at ?? null;
+}
+
+function sortUsersList(users: UserData[], config: SortConfig): UserData[] {
+  const multiplier = config.direction === "ascending" ? 1 : -1;
+
+  return [...users].sort((a, b) => {
+    switch (config.key) {
+      case "user": {
+        return (
+          getUserSortValue(a).localeCompare(getUserSortValue(b)) * multiplier
+        );
+      }
+      case "outreachMinutes": {
+        const diff = (a.outreach_minutes ?? 0) - (b.outreach_minutes ?? 0);
+        if (diff === 0) return 0;
+        return diff > 0 ? multiplier : -multiplier;
+      }
+      case "lastOutreachEvent": {
+        const aTimestamp = Date.parse(
+          getLastOutreachDate(a as ExtendedUserData) ?? ""
+        );
+        const bTimestamp = Date.parse(
+          getLastOutreachDate(b as ExtendedUserData) ?? ""
+        );
+        const safeA = Number.isFinite(aTimestamp) ? aTimestamp : 0;
+        const safeB = Number.isFinite(bTimestamp) ? bTimestamp : 0;
+        if (safeA === safeB) return 0;
+        return safeA > safeB ? multiplier : -multiplier;
+      }
+      default:
+        return 0;
+    }
+  });
+}
 
 // Main OutreachTable component
 export function OutreachTable({
-  users,
+  allUsers,
   canManage,
   isLoading,
   isLoadingMore,
   outreachMinutesCutoff,
   isMobile = false,
-  hasMore,
-  totalItems,
-  onLoadMoreAction,
-  onReloadAction
+  refetchData
 }: OutreachTableProps) {
-  const [sortedUsers, setSortedUsers] = useState(users);
-
-  const [sortConfig, setSortConfig] = useState({
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "user",
     direction: "ascending"
   });
 
+  const [sortedUsers, setSortedUsers] = useState<UserData[]>(() =>
+    sortUsersList(allUsers, sortConfig)
+  );
+
   useEffect(() => {
-    const sortUsers = (users: UserData[], config: typeof sortConfig) => {
-      return [...users].sort((a, b) => {
-        let aValue, bValue;
-
-        switch (config.key) {
-          case "user":
-            aValue = a.expand?.user?.name || "";
-            bValue = b.expand?.user?.name || "";
-            break;
-          case "outreachMinutes":
-            aValue = a.outreachMinutes || 0;
-            bValue = b.outreachMinutes || 0;
-            break;
-          case "lastOutreachEvent":
-            aValue = new Date(a.lastOutreachEvent).getTime();
-            bValue = new Date(b.lastOutreachEvent).getTime();
-            break;
-          default:
-            return 0;
-        }
-
-        if (aValue < bValue) {
-          return config.direction === "ascending" ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return config.direction === "ascending" ? 1 : -1;
-        }
-        return 0;
-      });
-    };
-    setSortedUsers(sortUsers(users, sortConfig));
-  }, [users, sortConfig]);
-
-  const hasUsers = sortedUsers.length > 0;
-  const handleLoadMore = useCallback(() => {
-    if (onLoadMoreAction) {
-      onLoadMoreAction();
-    }
-  }, [onLoadMoreAction]);
+    setSortedUsers(sortUsersList(allUsers, sortConfig));
+  }, [allUsers, sortConfig]);
 
   // Mobile Card Layout (avoid nested scroll; parent provides vertical scrolling)
   if (isMobile) {
     return (
       <div className="w-full">
         <div className="space-y-3">
+          {canManage && (
+            <div className="flex justify-end">
+              <ManageEventsSheet onClose={refetchData} />
+            </div>
+          )}
           {/* Sort Controls for Mobile */}
           <div className="flex gap-2 p-2 bg-muted/50 rounded-lg">
             <Button
@@ -195,51 +237,29 @@ export function OutreachTable({
                 Loading...
               </div>
             </div>
-          ) : users.length === 0 ? (
+          ) : allUsers.length === 0 ? (
             <div className="text-center py-8">No user data found</div>
           ) : (
             sortedUsers.map((userData) => (
-              <Card key={userData.id} className="p-4">
+              <Card key={userData.user} className="p-4">
                 <CardContent className="p-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <Avatar className="h-10 w-10 flex-shrink-0">
-                        <AvatarImage
-                          src={recordToImageUrl(
-                            userData.expand?.user
-                          )?.toString()}
-                          alt={userData.expand?.user.name}
-                          className="rounded-full"
-                        />
-                        <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
-                          {userData.expand?.user.name.charAt(0) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium truncate">
-                          {userData.expand?.user?.name || "Unknown"}
-                        </div>
-                        <div className="text-sm text-muted-foreground truncate">
-                          {userData.expand?.user?.email}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {formatPbDate(userData.lastOutreachEvent) || "N/A"}
-                        </div>
-                      </div>
+                      <UserInfo user={userData} />
                     </div>
                     <div className="flex flex-col items-end gap-2 flex-shrink-0">
                       <Badge
                         className={`${getBadgeStatusStyles(
-                          userData.outreachMinutes,
+                          userData.outreach_minutes ?? 0,
                           outreachMinutesCutoff,
                           outreachMinutesCutoff - 60 * 3
                         )} text-sm`}>
-                        {formatMinutes(userData.outreachMinutes)}
+                        {formatMinutes(userData.outreach_minutes ?? 0)}
                       </Badge>
                       {canManage && (
-                        <AdjustHoursDialog
+                        <EditUserDialog
                           userData={userData}
-                          onAdjusted={onReloadAction}
+                          refreshFunc={refetchData}
                         />
                       )}
                     </div>
@@ -256,17 +276,6 @@ export function OutreachTable({
               </div>
             </div>
           )}
-          {!isLoading && hasMore && (
-            <div className="flex justify-center pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleLoadMore}
-                disabled={isLoadingMore || !onLoadMoreAction}>
-                {isLoadingMore ? "Loading..." : "Load more"}
-              </Button>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -275,20 +284,6 @@ export function OutreachTable({
   // Desktop Table Layout (enable horizontal scroll to avoid clipped cells)
   return (
     <div className="relative w-full h-full overflow-x-auto">
-      <div className="flex items-center justify-between py-2 text-sm text-muted-foreground">
-        <span>
-          Showing {hasUsers ? sortedUsers.length : 0} of {totalItems} members
-        </span>
-        {hasMore && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLoadMore}
-            disabled={isLoadingMore || !onLoadMoreAction}>
-            {isLoadingMore ? "Loading..." : "Load more"}
-          </Button>
-        )}
-      </div>
       <Table className="w-full min-w-[780px]">
         <TableHeader>
           <TableRow>
@@ -308,7 +303,7 @@ export function OutreachTable({
                       prev.key === head.key && prev.direction === "ascending"
                         ? "descending"
                         : "ascending";
-                    return { key: head.key, direction: newDirection } as any;
+                    return { key: head.key, direction: newDirection };
                   });
                 }}>
                 <div className="flex items-center justify-baseline gap-5">
@@ -317,7 +312,7 @@ export function OutreachTable({
                     {head.key === "user" && (
                       <span className="text-muted-foreground">
                         {" "}
-                        ({totalItems})
+                        ({allUsers.length})
                       </span>
                     )}
                   </span>
@@ -350,7 +345,7 @@ export function OutreachTable({
                 </div>
               </TableCell>
             </TableRow>
-          ) : users.length === 0 ? (
+          ) : allUsers.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={canManage ? 5 : 4}
@@ -360,27 +355,25 @@ export function OutreachTable({
             </TableRow>
           ) : (
             sortedUsers.map((userData) => (
-              <TableRow key={userData.id}>
+              <TableRow key={userData.user}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2 min-w-0">
                     <Avatar>
                       <AvatarImage
-                        src={recordToImageUrl(
-                          userData.expand?.user
-                        )?.toString()}
-                        alt={userData.expand?.user.name}
+                        src={userData.avatar_url ?? undefined}
+                        alt={userData.name ?? userData.email ?? "User avatar"}
                         className="rounded-full"
                       />
                       <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
-                        {userData.expand?.user.name.charAt(0) || "?"}
+                        {userData.name?.charAt(0)?.toUpperCase() || "?"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0">
                       <div className="font-medium truncate">
-                        {userData.expand?.user?.name || "Unknown"}
+                        {userData.name || "Unknown"}
                       </div>
                       <div className="text-sm text-muted-foreground truncate">
-                        {userData.expand?.user?.email}
+                        {userData.email || "No email"}
                       </div>
                     </div>
                   </div>
@@ -388,21 +381,23 @@ export function OutreachTable({
                 <TableCell>
                   <Badge
                     className={`${getBadgeStatusStyles(
-                      userData.outreachMinutes,
+                      userData.outreach_minutes ?? 0,
                       outreachMinutesCutoff,
                       outreachMinutesCutoff - 60 * 3
                     )} text-sm md:text-base`}>
-                    {formatMinutes(userData.outreachMinutes)}
+                    {formatMinutes(userData.outreach_minutes ?? 0)}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {formatPbDate(userData.lastOutreachEvent) || "N/A"}
+                  {formatPbDate(
+                    getLastOutreachDate(userData as ExtendedUserData) ?? ""
+                  ) || "N/A"}
                 </TableCell>
                 {canManage && (
                   <TableCell>
-                    <AdjustHoursDialog
+                    <EditUserDialog
                       userData={userData}
-                      onAdjusted={onReloadAction}
+                      refreshFunc={refetchData}
                     />
                   </TableCell>
                 )}
@@ -423,16 +418,6 @@ export function OutreachTable({
           )}
         </TableBody>
       </Table>
-      {!isLoading && hasMore && (
-        <div className="flex justify-center py-4">
-          <Button
-            variant="outline"
-            onClick={handleLoadMore}
-            disabled={isLoadingMore || !onLoadMoreAction}>
-            {isLoadingMore ? "Loading..." : "Load more"}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

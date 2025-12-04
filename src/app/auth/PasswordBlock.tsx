@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 import { Eye, EyeOff } from "lucide-react";
 
-export default function PasswordBlock(props: any) {
-  const [passwordVisible, SETpasswordVisible] = useState(false);
+type PasswordBlockProps = ComponentProps<typeof Input>;
+
+export default function PasswordBlock(props: PasswordBlockProps) {
+  const [passwordVisible, setPasswordVisible] = useState(false);
 
   const attr = {
     ...props,
@@ -22,7 +24,7 @@ export default function PasswordBlock(props: any) {
         type="button"
         className="p-0 aspect-square"
         variant={"outline"}
-        onClick={() => SETpasswordVisible(!passwordVisible)}>
+        onClick={() => setPasswordVisible(!passwordVisible)}>
         {passwordVisible ? (
           <EyeOff className="h-4 w-4" />
         ) : (

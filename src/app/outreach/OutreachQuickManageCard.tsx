@@ -5,8 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import { fetchEvents } from "@/lib/db/outreach";
-import { PBBrowser } from "@/lib/pb";
-import type { OutreachEvent } from "@/lib/types/pocketbase";
+import type { OutreachEvent } from "@/lib/types/db";
 import { formatPbDate } from "@/lib/utils";
 
 import {
@@ -37,12 +36,12 @@ function getUpcomingEvents(events: OutreachEvent[]) {
   return events
     .filter((event) => {
       if (!event.date) return false;
-      const time = new Date(event.date).getTime();
+      const time = new Date(event.date ?? "").getTime();
       return (
         !Number.isNaN(time) && time >= now.getTime() - 1000 * 60 * 60 * 24 * 2
       );
     })
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .sort((a, b) => new Date(a.date ?? "").getTime() - new Date(b.date ?? "").getTime())
     .slice(0, MAX_VISIBLE_EVENTS);
 }
 
@@ -65,7 +64,7 @@ export default function OutreachQuickManageCard({
 
   const refreshEvents = useCallback(async () => {
     setLoading(true);
-    const [error, latestEvents] = await fetchEvents(PBBrowser.getInstance());
+    const [error, latestEvents] = await fetchEvents();
 
     if (error || !latestEvents) {
       const message = error ? `PocketBase error ${error}` : "No events found";
@@ -129,14 +128,14 @@ export default function OutreachQuickManageCard({
                   <div>
                     <h3 className="font-medium text-sm">{event.name}</h3>
                     <p className="text-xs text-muted-foreground">
-                      {formatPbDate(event.date)}
+                      {formatPbDate(event.date ?? "")}
                     </p>
                   </div>
                   <Badge
                     variant="secondary"
                     className="flex items-center gap-1">
                     <Clock3 className="h-3 w-3" />
-                    {new Date(event.date).toLocaleDateString(undefined, {
+                    {new Date(event.date ?? "").toLocaleDateString(undefined, {
                       weekday: "short"
                     })}
                   </Badge>

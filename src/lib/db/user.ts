@@ -1,86 +1,77 @@
-import { Dispatch, SetStateAction } from "react";
-import type { ListResult, OnStoreChangeFunc } from "pocketbase";
+import { makeSBRequest } from "./supabase/supabase";
+import type { UserData } from "../types/db";
 
-import type { User, UserData } from "@/lib/types/pocketbase";
-import { clearPBAuthCookie } from "../pbServerUtils";
-import { PBClientBase } from "../pb";
-import { ErrorCodes } from "../states";
-import { logger } from "../logger";
+type PaginatedResult<T> = {
+  items: T[];
+  page: number;
+  perPage: number;
+  totalItems: number;
+  totalPages: number;
+};
 
-export async function newUser(
-  email: string,
-  password: string,
-  name: string,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, User]> {
-  const [lookupError, existingUser] = await client.getFirstListItem<User>(
-    "users",
-    `email="${email.replace(/"/g, '\\"')}"`
+async function getUserDataRange(
+  from: number,
+  to: number
+): Promise<{
+  rows: UserData[];
+  count: number | null;
+}> {
+  const { data, error, count } = await makeSBRequest(async (sb) =>
+    sb.from("UserData").select("*", { count: "exact" }).range(from, to)
   );
-  if (existingUser) return ["01x03", null];
-  if (lookupError && lookupError !== "01x404") return [lookupError, null];
 
-  return createUser(email, password, name, client);
-}
-
-export async function createUser(
-  email: string,
-  password: string,
-  name: string,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, User]> {
-  const result = await client.createOne<User>("users", {
-    email,
-    password,
-    passwordConfirm: password,
-    emailVisibility: true,
-    name,
-    role: "member"
-  });
-
-  const [, createdUser] = result;
-  if (createdUser) {
-    logger.info({ userId: createdUser.id, email }, "Created new user");
+  if (error || !data) {
+    return {
+      rows: [],
+      count: null
+    };
   }
 
-  return result;
+  return {
+    rows: data,
+    count
+  };
 }
 
-export function registerAuthCallback(
-  cb: OnStoreChangeFunc,
-  client: PBClientBase
-) {
-  client.authStore.onChange(cb, true);
-}
-
-export async function listUserData(
+export async function fetchUserDataPaginated(
   page: number,
-  perPage: number,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, ListResult<UserData>]> {
-  return client.getList<UserData>("UserData", page, perPage, {
-    expand: "user",
-    requestKey: null
-  });
+  perPage: number
+): Promise<PaginatedResult<UserData> | null> {
+  const from = (page - 1) * perPage;
+  const to = from + perPage - 1;
+
+  const { rows, count } = await getUserDataRange(from, to);
+
+  if (count === null) {
+    return null;
+  }
+
+  return {
+    items: rows,
+    page,
+    perPage,
+    totalItems: count,
+    totalPages: Math.ceil(count / perPage)
+  };
 }
 
-export async function listAllUsers(
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, User[]]> {
-  return client.getFullList<User>("users", undefined, { sort: "name" });
+export async function fetchUserData(id: string): Promise<UserData | null> {
+  const [error, data] = await getUserDataByUserId(id);
+  if (error || !data) {
+    return null;
+  }
+  return data;
 }
 
-export async function getUserData(
-  userId: string,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, UserData]> {
-  const [error, data] = await client.getFirstListItem<UserData>(
-    "UserData",
-    `user='${userId}'`,
-    { expand: "user", requestKey: null }
+export async function getUserDataByUserId(
+  userId: string
+): Promise<[string | null, UserData | null]> {
+  const { data, error } = await makeSBRequest(async (sb) =>
+    sb.from("UserData").select("*").eq("user", userId).limit(1).single()
   );
-  if (error) {
-    return [error, null];
+
+  if (error || !data) {
+    return [error?.message ?? "Failed to load user data", null];
   }
 
   return [null, data];

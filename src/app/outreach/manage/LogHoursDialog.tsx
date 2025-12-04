@@ -1,11 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { createSessionsBulk, updateEvent } from "@/lib/db/outreach";
-import { listAllUsers } from "@/lib/db/user";
+import { getAllUsers } from "@/lib/db/server";
 import { formatMinutes, cn } from "@/lib/utils";
-import type { OutreachEvent, User } from "@/lib/types/pocketbase";
 import { logger } from "@/lib/logger";
-import { ErrorToString } from "@/lib/states";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +42,7 @@ import {
   Save,
   Calendar
 } from "lucide-react";
-import { PBBrowser } from "@/lib/pb";
+import type { OutreachEvent, UserData } from "@/lib/types/db";
 
 interface LogHoursDialogProps {
   event: OutreachEvent;
@@ -67,14 +65,15 @@ export default function LogHoursDialog({
   onEventUpdated
 }: LogHoursDialogProps) {
   const [open, setOpen] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [fetchingUsers, setFetchingUsers] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
-
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
-  const [eventName, setEventName] = useState(event.name);
-  const [eventDate, setEventDate] = useState(event.date.split(" ").at(0));
+  const [eventName, setEventName] = useState(event.name ?? "");
+  const [eventDate, setEventDate] = useState(
+    event.date ? event.date.split(" ").at(0) ?? "" : ""
+  );
 
   const [submissions, setSubmissions] = useState<UserSubmission[]>([
     {
@@ -87,8 +86,8 @@ export default function LogHoursDialog({
   // Reset editable event fields whenever dialog opens
   useEffect(() => {
     if (open) {
-      setEventName(event.name);
-      setEventDate(event.date.split(" ").at(0));
+      setEventName(event.name ?? "");
+      setEventDate(event.date ? event.date.split(" ").at(0) ?? "" : "");
     }
   }, [open, event.name, event.date]);
 
@@ -96,38 +95,37 @@ export default function LogHoursDialog({
     if (open) {
       let hasChanges = false;
       if (event.name !== eventName) hasChanges = true;
-      if (event.date.split(" ").at(0) !== eventDate) hasChanges = true;
+      if ((event.date ?? "").split(" ").at(0) !== eventDate) hasChanges = true;
 
       setIsSaveDisabled(!hasChanges);
     }
   }, [eventName, eventDate, open, event.name, event.date]);
 
-  // Fetch users when dialog opens
-  useEffect(() => {
-    if (!users.length && open) {
-      fetchUsers();
-    }
-  }, [users.length, open]);
-
-  async function fetchUsers() {
+  const fetchUsers = useCallback(async () => {
     setFetchingUsers(true);
     try {
-      const [error, allUsers] = await listAllUsers(PBBrowser.getInstance());
+      const [error, allUsers] = await getAllUsers();
 
       if (error || !allUsers) {
-        throw new Error(
-          error ? ErrorToString[error] ?? "PocketBase error" : "No users"
-        );
+        throw new Error(error ?? "Failed to load users");
       }
 
       setUsers(allUsers);
-    } catch (error: any) {
-      logger.error({ err: error?.message }, "Error fetching users");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ err: message }, "Error fetching users");
       toast.error("Failed to load users");
     } finally {
       setFetchingUsers(false);
     }
-  }
+  }, []);
+
+  // Fetch users when dialog opens
+  useEffect(() => {
+    if (!users.length && open) {
+      void fetchUsers();
+    }
+  }, [fetchUsers, open, users.length]);
 
   const addNewSubmission = () =>
     setSubmissions((prev) => [
@@ -185,14 +183,14 @@ export default function LogHoursDialog({
       const [error] = await createSessionsBulk(
         valid.map((s) => ({
           userId: s.userId,
-          eventId: event.id,
+          // DB schema uses OutreachSessions.event -> OutreachEvents.name
+          eventId: event.name ?? String(event.id),
           minutes: s.minutes
-        })),
-        PBBrowser.getInstance()
+        }))
       );
 
       if (error) {
-        throw new Error(ErrorToString[error] ?? error);
+        throw new Error(error ?? "Failed to log hours");
       }
 
       logger.info({ eventId: event.id, count: valid.length }, "Hours logged");
@@ -213,11 +211,9 @@ export default function LogHoursDialog({
 
       setOpen(false);
       onHoursLogged();
-    } catch (error: any) {
-      logger.error(
-        { eventId: event.id, err: error?.message },
-        "Error logging hours"
-      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ eventId: event.id, err: message }, "Error logging hours");
       toast.error("Failed to log hours");
     } finally {
       setSubmitting(false);
@@ -230,33 +226,30 @@ export default function LogHoursDialog({
       return;
     }
 
-    if (eventName === event.name && eventDate === event.date.split(" ")[0]) {
+    if (
+      eventName === event.name &&
+      eventDate === (event.date ?? "").split(" ")[0]
+    ) {
       toast.message("No changes to save");
       return;
     }
 
     setSavingEvent(true);
     try {
-      const [error] = await updateEvent(
-        event.id,
-        {
-          name: eventName,
-          date: eventDate
-        },
-        PBBrowser.getInstance()
-      );
+      const [error] = await updateEvent(event.id, {
+        name: eventName,
+        date: eventDate
+      });
 
       if (error) {
-        throw new Error(ErrorToString[error] ?? error);
+        throw new Error(error ?? "Failed to update event");
       }
       logger.info({ eventId: event.id }, "Event updated");
       toast.success("Event updated");
       onEventUpdated?.();
-    } catch (error: any) {
-      logger.error(
-        { eventId: event.id, err: error?.message },
-        "Error updating event"
-      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error({ eventId: event.id, err: message }, "Error updating event");
       toast.error("Failed to update event");
     } finally {
       setSavingEvent(false);
@@ -476,7 +469,7 @@ function UserCombobox({
   disabled,
   placeholder = "Select user..."
 }: {
-  users: User[];
+  users: UserData[];
   value: string;
   onChange: (val: string) => void;
   disabled?: boolean;
@@ -484,7 +477,8 @@ function UserCombobox({
 }) {
   const [open, setOpen] = useState(false);
 
-  const currentUser = users.find((u) => u.id === value);
+  const currentUser = users.find((u) => u.user === value);
+  const fallbackDisplay = currentUser?.name ?? currentUser?.email ?? "Unknown";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -500,8 +494,8 @@ function UserCombobox({
             {currentUser ? (
               <>
                 <UserIcon className="h-4 w-4 opacity-70" />
-                <span className="truncate" title={currentUser.name}>
-                  {currentUser.name}
+                <span className="truncate" title={fallbackDisplay}>
+                  {fallbackDisplay}
                 </span>
               </>
             ) : (
@@ -519,23 +513,25 @@ function UserCombobox({
             <CommandGroup>
               {users.map((user) => (
                 <CommandItem
-                  key={user.id}
-                  value={user.name}
+                  key={user.user}
+                  value={`${user.name ?? ""} ${user.email ?? ""} ${user.user}`}
                   onSelect={() => {
-                    onChange(user.id);
+                    onChange(user.user);
                     setOpen(false);
                   }}>
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      user.id === value ? "opacity-100" : "opacity-0"
+                      user.user === value ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  <span className="truncate" title={user.name}>
-                    {user.name}
+                  <span
+                    className="truncate"
+                    title={user.name ?? user.email ?? "Unknown"}>
+                    {user.name ?? user.email ?? "Unknown"}
                   </span>
                 </CommandItem>
-              ))}
+              ))}{" "}
             </CommandGroup>
           </CommandList>
         </Command>

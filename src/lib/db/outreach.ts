@@ -1,163 +1,176 @@
-import { OutreachEvent, OutreachSession } from "@/lib/types/pocketbase";
-import { type PBClientBase } from "../pb";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { getSBBrowserClient } from "./supabase/sbClient";
+import { makeSBRequest } from "./supabase/supabase";
+import type { OutreachEvent, OutreachSession } from "../types/db";
+import { cache } from "react";
+import { runFlag } from "../flags";
 
-import { ErrorCodes } from "../states";
-import { logger } from "../logger";
+type SessionInsert = {
+  userId: string;
+  eventId: string;
+  minutes: number;
+};
 
-export async function fetchEvents(
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, OutreachEvent[]]> {
-  return client.getFullList<OutreachEvent>("OutreachEvents", undefined, {
-    sort: "-created"
-  });
-}
+export async function fetchEvents(): Promise<
+  [string | null, OutreachEvent[] | null]
+> {
+  const { data, error } = await makeSBRequest(async (sb) =>
+    sb.from("OutreachEvents").select("*").order("date", { ascending: false })
+  );
 
-export async function createEvent(
-  data: { name: string; date: string },
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, OutreachEvent]> {
-  const result = await client.createOne<OutreachEvent>("OutreachEvents", data);
-
-  const [, record] = result;
-  if (record) {
-    logger.info(
-      { eventId: record.id, name: data.name },
-      "Outreach event created"
-    );
+  if (error || !data) {
+    return [error?.message ?? "Failed to load events", null];
   }
 
-  return result;
+  return [null, data];
+}
+
+export async function createEvent(payload: {
+  name: string;
+  date: string;
+}): Promise<[string | null, OutreachEvent | null]> {
+  const eventDate = new Date(payload.date).toISOString().split("T")[0];
+
+  const { data, error } = await makeSBRequest(async (sb) =>
+    sb
+      .from("OutreachEvents")
+      .insert({
+        name: payload.name,
+        date: eventDate
+      })
+      .select("*")
+      .maybeSingle()
+  );
+
+  if (error || !data) {
+    return [error?.message ?? "Failed to create event", null];
+  }
+
+  return [null, data];
 }
 
 export async function updateEvent(
-  id: string,
-  data: Partial<Pick<OutreachEvent, "name" | "date">>,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, OutreachEvent]> {
-  const result = await client.updateOne<OutreachEvent>(
-    "OutreachEvents",
-    id,
-    data
+  eventId: number,
+  updates: Partial<{ name: string; date: string }>
+): Promise<[string | null]> {
+  const payload: Partial<OutreachEvent> = {};
+
+  if (updates.name !== undefined) {
+    payload.name = updates.name;
+  }
+
+  if (updates.date) {
+    payload.date = new Date(updates.date).toISOString().split("T")[0];
+  }
+
+  const { error } = await makeSBRequest(async (sb) =>
+    sb.from("OutreachEvents").update(payload).eq("id", eventId)
   );
 
-  const [, record] = result;
-  if (record) {
-    logger.info({ eventId: id, ...data }, "Outreach event updated");
+  if (error) {
+    return [error.message];
   }
 
-  return result;
+  return [null];
 }
 
-export async function deleteEvent(
-  id: string,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, true]> {
-  const result = await client.deleteOne("OutreachEvents", id);
+export async function deleteEvent(eventId: number): Promise<[string | null]> {
+  const { error } = await makeSBRequest(async (sb) =>
+    sb.from("OutreachEvents").delete().eq("id", eventId)
+  );
 
-  if (!result[0]) {
-    logger.warn({ eventId: id }, "Outreach event deleted");
+  if (error) {
+    return [error.message];
   }
 
-  return result;
+  return [null];
 }
 
 export async function fetchSessionsForEvent(
-  eventId: string,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, OutreachSession[]]> {
-  return client.getFullList<OutreachSession>("OutreachSessions", undefined, {
-    filter: `event = "${eventId}"`,
-    expand: "user",
-    sort: "-created"
-  });
-}
+  eventId: string
+): Promise<[string | null, OutreachSession[] | null]> {
+  const { data, error } = await makeSBRequest(async (sb) =>
+    sb
+      .from("OutreachSessions")
+      .select("*")
+      .eq("event", eventId)
+      .order("created_at", { ascending: false })
+  );
 
-export async function deleteSession(
-  id: string,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, true]> {
-  const result = await client.deleteOne("OutreachSessions", id);
-
-  if (!result[0]) {
-    logger.warn({ sessionId: id }, "Outreach session deleted");
+  if (error) {
+    return [error?.message ?? "Failed to load sessions", null];
   }
 
-  return result;
+  return [null, data];
 }
 
 export async function createSessionsBulk(
-  sessions: { userId: string; eventId: string; minutes: number }[],
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, OutreachSession[]]> {
-  const createdSessions: OutreachSession[] = [];
-
-  for (const session of sessions) {
-    const [error, record] = await client.createOne<OutreachSession>(
-      "OutreachSessions",
-      {
-        user: session.userId,
-        event: session.eventId,
-        minutes: session.minutes
-      },
-      { requestKey: null }
-    );
-
-    if (error || !record) {
-      return [error ?? "01x01", null];
-    }
-
-    createdSessions.push(record);
+  records: SessionInsert[]
+): Promise<[string | null]> {
+  if (!records.length) {
+    return [null];
   }
 
-  logger.info(
-    { count: createdSessions.length, eventId: sessions[0]?.eventId },
-    "Bulk outreach sessions created"
+  const payload = records.map((record) => ({
+    user: record.userId,
+    event: record.eventId,
+    minutes: record.minutes
+  }));
+
+  const { error } = await makeSBRequest(async (sb) =>
+    sb.from("OutreachSessions").insert(payload)
   );
 
-  return [null, createdSessions];
+  if (error) {
+    return [error.message];
+  }
+
+  return [null];
+}
+
+export async function deleteSession(
+  sessionId: number
+): Promise<[string | null]> {
+  const { error } = await makeSBRequest(async (sb) =>
+    sb.from("OutreachSessions").delete().eq("id", sessionId)
+  );
+
+  if (error) {
+    return [error.message];
+  }
+
+  return [null];
 }
 
 export async function fetchUserSessionEventDates(
-  userId: string,
-  client: PBClientBase
-): Promise<[ErrorCodes, null] | [null, string[]]> {
-  const [error, sessions] = await client.getFullList<OutreachSession>(
-    "OutreachSessions",
-    undefined,
-    {
-      filter: `user="${userId}"`,
-      expand: "event",
-      requestKey: null
-    }
+  userId: string
+): Promise<[string | null, string[] | null]> {
+  const { data, error } = await makeSBRequest(async (sb) =>
+    sb
+      .from("OutreachSessions")
+      .select("event:OutreachEvents(date)")
+      .eq("user", userId)
+      .order("event", { ascending: false })
   );
 
-  if (error) {
-    return [error, null];
+  if (error || !data) {
+    return [error?.message ?? "Failed to load activity", null];
   }
 
-  const dates = (sessions ?? [])
-    .map((r) => r.expand?.event?.date)
-    .filter(Boolean) as string[];
-
-  return [null, dates];
+  return [null, data.map((row) => row.event.date ?? "")];
 }
-export async function getOutreachMinutesCutoff(client: PBClientBase) {
-  const [error, record] = await client.getFirstListItem(
-    "Settings",
-    "key='OutreachMinsCutoff'",
-    {
-      requestKey: null
-    }
+
+export const getOutreachMinutesCutoff = cache(async (): Promise<number> => {
+  const DEFAULT_MINUTES_CUTOFF = 900;
+
+  const { enabled, value, exists } = await runFlag(
+    "outreach_minutes_cutoff",
+    getSBBrowserClient()
   );
 
-  if (error) {
-    logger.error(
-      { key: "OutreachMinsCutoff", code: error },
-      "Failed to fetch outreach minutes cutoff"
-    );
-    return 900;
-  }
+  if (!exists) return DEFAULT_MINUTES_CUTOFF;
+  if (enabled && typeof value === "number" && Number.isFinite(value))
+    return value;
 
-  const outreachMinutesCutoff = parseInt(record.value) || 900;
-  return outreachMinutesCutoff;
-}
+  return DEFAULT_MINUTES_CUTOFF;
+});

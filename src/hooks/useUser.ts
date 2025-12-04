@@ -1,24 +1,70 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { getSBBrowserClient } from "@/lib/db/supabase/sbClient";
 
-import { registerAuthCallback } from "@/lib/db/user";
-import type { User } from "@/lib/types/pocketbase";
-import { PBBrowser } from "@/lib/pb";
-import { OnStoreChangeFunc } from "pocketbase";
+import type { FullUserData, User } from "@/lib/types/db";
+import { getUserDataByUserId } from "@/lib/db/user";
 
 export function useUser() {
-  const pb = PBBrowser.getInstance();
-  const [user, setUser] = useState<User | null>(null);
+  const supabase = getSBBrowserClient();
+  const [user, setUser] = useState<FullUserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const callback: OnStoreChangeFunc = useCallback(
-    (token, record) => {
-      setUser(record as User | null);
-    },
-    [pb]
-  );
+  const combineUserData = useCallback(async (user: User) => {
+    const [error, userData] = await getUserDataByUserId(user?.id || "");
+
+    if (error || !userData) {
+      return;
+    }
+
+    const union = { ...user, ...userData } as FullUserData;
+
+    return union;
+  }, []);
 
   useEffect(() => {
-    return registerAuthCallback(callback, pb);
-  }, [pb, callback]);
+    let active = true;
+    let subscription: { unsubscribe: () => void } | null = null;
 
-  return { user, setUser } as const;
+    (async () => {
+      const userRes = await supabase.auth.getUser();
+
+      if (!active) return;
+
+      if (userRes.error || !userRes.data.user) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      const combinedUser = await combineUserData(userRes.data.user);
+
+      if (!active) return;
+
+      setUser(combinedUser || null);
+      setIsLoading(false);
+
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!session?.user) {
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+
+        combineUserData(session?.user).then((combinedUser) => {
+          if (!active) return;
+          setUser(combinedUser || null);
+          setIsLoading(false);
+        });
+      });
+
+      subscription = data.subscription;
+    })();
+
+    return () => {
+      active = false;
+      subscription?.unsubscribe();
+    };
+  }, [supabase, setUser, combineUserData]);
+
+  return { user, isLoading } as const;
 }

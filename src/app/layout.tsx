@@ -33,7 +33,6 @@ export default function RootLayout({
         <main className={`w-full ${geistSans.className} antialiased`}>
           <Navbar />
           <NavbarTip />
-          <Toaster />
           {children}
         </main>
         <Toaster richColors closeButton />

@@ -1,12 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useIsHydrated } from "@/hooks/useIsHydrated";
+import { useIsMounted } from "@/hooks/useIsHydrated";
 import { useNavbar } from "@/hooks/useNavbar";
 import { loginOAuth, signupEmailPass } from "@/lib/auth";
-import { BaseStates, SignupStates } from "@/lib/states";
+import { BaseStates, SignupStates, stateToMessage } from "@/lib/types/states";
 import { logger } from "@/lib/logger";
 
 import Image from "next/image";
@@ -23,21 +23,25 @@ import { Label } from "@/components/ui/label";
 import PasswordBlock from "../PasswordBlock";
 import SkeletonSignupForm from "./SkeletonSignupForm";
 import Link from "next/link";
+import { safeParseSearchParams } from "@/lib/utils";
 
 export default function SignupForm() {
+  const [redirectRoute, setRedirectRoute] = useState("/");
+
   const { doMinimalRendering, setDefaultExpanded } = useNavbar();
-
   const router = useRouter();
-  const isHydrated = useIsHydrated();
+  const isHydrated = useIsMounted();
 
-  const redirectRoute = useMemo(() => {
-    if (typeof window === "undefined") return "/";
-    return new URLSearchParams(window.location.search).get("redirect") || "/";
+  useEffect(() => {
+    const params = safeParseSearchParams(window.location.search);
+    const redirect = params?.get("redirect");
+
+    if (redirect?.startsWith("/") && !redirect.startsWith("//")) {
+      setRedirectRoute(redirect);
+    }
   }, []);
 
-  const redirect = useCallback(() => {
-    console.log("Redirecting to:", redirectRoute);
-
+  const runRedirect = useCallback(() => {
     toast.dismiss();
     router.push(redirectRoute);
   }, [router, redirectRoute]);
@@ -51,7 +55,7 @@ export default function SignupForm() {
       case BaseStates.SUCCESS:
         toast.success("Login successful!", { id: "oAuthLoader" });
         logger.info({ provider: type }, "OAuth signup/login successful");
-        redirect();
+        runRedirect();
         break;
       case BaseStates.ERROR:
       default:
@@ -78,76 +82,26 @@ export default function SignupForm() {
 
       name = name.trim();
       email = email.trim();
-
-      toast.dismiss();
-      toast.loading("Creating account...", { id: "aLoader" });
+      toast.success("Login successful!", { id: "aLoader" });
+      logger.info({ email }, "Password signup successful");
 
       let state = SignupStates.ERR_UNKNOWN;
       state = await signupEmailPass(email, password1, password2, name);
 
       switch (state) {
         case SignupStates.SUCCESS:
-          toast.success("Account created successfully!", { id: "aLoader" });
-          logger.info({ email }, "User signup successful");
-          redirect();
+          toast.success("Login successful!", { id: "aLoader" });
+          logger.info({ email }, "Password login successful");
+          runRedirect();
           break;
-        case SignupStates.ERR_EMAIL_NOT_PROVIDED:
-          toast.error("Email is required.", { id: "aLoader" });
-          break;
-        case SignupStates.ERR_PASSWORD_NOT_PROVIDED:
-          toast.error("Password is required.", { id: "aLoader" });
-          break;
-        case SignupStates.ERR_NAME_NOT_PROVIDED:
-          toast.error("Display name is required.", { id: "aLoader" });
-          break;
-        case SignupStates.ERR_INVALID_EMAIL:
-          toast.error("Please enter a valid email address.", { id: "aLoader" });
-          break;
-        case SignupStates.ERR_INVALID_NAME:
-          toast.error("Display name can only contain letters and numbers.", {
-            id: "aLoader"
-          });
-          break;
-        case SignupStates.ERR_NAME_TOO_SHORT:
-          toast.error("Display name must be at least 3 characters long.", {
-            id: "aLoader"
-          });
-          break;
-        case SignupStates.ERR_PASSWORD_TOO_SHORT:
-          toast.error("Password must be at least 8 characters long.", {
-            id: "aLoader"
-          });
-          break;
-        case SignupStates.ERR_PASSWORDS_DONT_MATCH:
-          toast.error("Passwords do not match.", { id: "aLoader" });
-          break;
-        case SignupStates.ERR_ALREADY_EXISTS:
-          toast.error("An account with this email already exists.", {
-            id: "aLoader"
-          });
-          toast.info(
-            "Looks like you have an account. Do you want to log in instead?",
-            {
-              duration: 10000,
-              action: {
-                label: "Take me there",
-                onClick: () => {
-                  router.push("/auth/login");
-                }
-              }
-            }
-          );
-          break;
-        case SignupStates.ERR_UNKNOWN:
         default:
-          toast.error("Something went wrong. Please try again later.", {
+          toast.error(stateToMessage(state), {
             id: "aLoader"
           });
-          logger.error({ email }, "Unknown signup error");
           break;
       }
     },
-    [redirect, router]
+    [runRedirect]
   );
 
   useEffect(() => {
