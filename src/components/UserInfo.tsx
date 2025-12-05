@@ -9,9 +9,10 @@ type MinimalUserData = Pick<FullUserData, "name" | "email" | "avatar_url">;
 type UserInfoProps = Partial<{
   user: MinimalUserData;
   userId: string;
+  withoutEmail?: boolean;
 }>;
 
-export function UserInfo({ user, userId }: UserInfoProps) {
+export function UserInfo({ user, userId, withoutEmail }: UserInfoProps) {
   const [userData, setUserData] = useState<MinimalUserData | undefined>(user);
 
   useEffect(() => {
@@ -34,9 +35,11 @@ export function UserInfo({ user, userId }: UserInfoProps) {
       <UserAvatar name={userData?.name} avatarUrl={userData?.avatar_url} />
       <div>
         <div className="font-medium">{userData?.name || "Unknown User"}</div>
-        <div className="text-sm text-muted-foreground">
-          {userData?.email || "No Email"}
-        </div>
+        {!withoutEmail && (
+          <div className="text-sm text-muted-foreground">
+            {userData?.email || "No Email"}
+          </div>
+        )}
       </div>
     </div>
   );

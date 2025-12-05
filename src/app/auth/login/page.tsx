@@ -53,7 +53,7 @@ export default function LoginForm() {
 
     const state = await loginOAuth(
       type,
-      new URL(window.location.origin + redirectRoute)
+      new URL(redirectRoute, window.location.origin)
     );
 
     switch (state) {

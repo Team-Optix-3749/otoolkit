@@ -2,9 +2,10 @@ import type { UserData } from "./types/db";
 
 type UserRole = UserData["role"];
 
-const guest = ["outreach:view", "scouting:view", "scouting:submit"] as const;
+const guest = ["scouting:view", "scouting:submit"] as const;
 const member = [
   ...guest,
+  "outreach:view",
   "settings:view",
   "scouting:view_submissions"
 ] as const;
