@@ -358,24 +358,7 @@ export function OutreachTable({
               <TableRow key={userData.user}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Avatar>
-                      <AvatarImage
-                        src={userData.avatar_url ?? undefined}
-                        alt={userData.name ?? userData.email ?? "User avatar"}
-                        className="rounded-full"
-                      />
-                      <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
-                        {userData.name?.charAt(0)?.toUpperCase() || "?"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">
-                        {userData.name || "Unknown"}
-                      </div>
-                      <div className="text-sm text-muted-foreground truncate">
-                        {userData.email || "No email"}
-                      </div>
-                    </div>
+                    <UserInfo user={userData} withoutEmail={true} />
                   </div>
                 </TableCell>
                 <TableCell>
