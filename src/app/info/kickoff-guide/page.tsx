@@ -8,7 +8,7 @@ const sections = [
         description: "Learn the golden rules of FRC design, from 'Keep it Simple' to 'Steal from the Best'. Master the art of analyzing games and building winning strategies.",
         icon: Rocket,
         href: "/info/kickoff-guide/strategic-design",
-        color: "from-[var(--accent)] to-[var(--primary)]",
+        color: "from-blue-500 to-emerald-500",
         bgColor: "bg-blue-50 dark:bg-blue-950/20",
         borderColor: "border-blue-200 dark:border-blue-800"
     },
@@ -17,7 +17,7 @@ const sections = [
         description: "Deep dive into drivetrains, intakes, shooters, and elevators. Understand motors vs pneumatics, game piece processing, and device alignment.",
         icon: Cpu,
         href: "/info/kickoff-guide/mechanism-design",
-        color: "from-[var(--accent)] to-[var(--primary)]",
+        color: "from-blue-500 to-emerald-500",
         bgColor: "bg-blue-50 dark:bg-blue-950/20",
         borderColor: "border-blue-200 dark:border-blue-800"
     },
@@ -26,7 +26,7 @@ const sections = [
         description: "Navigate the intense 6-week build period. From kickoff analysis to prototyping deadlines, learn how to manage time and iterate rapidly.",
         icon: Wrench,
         href: "/info/kickoff-guide/build-season",
-        color: "from-[var(--accent)] to-[var(--primary)]",
+        color: "from-blue-500 to-emerald-500",
         bgColor: "bg-blue-50 dark:bg-blue-950/20",
         borderColor: "border-blue-200 dark:border-blue-800"
     },
@@ -35,7 +35,7 @@ const sections = [
         description: "Master quals, playoffs, and alliance selection. Learn defensive strategies, match preparation, and how to adapt between regionals.",
         icon: Trophy,
         href: "/info/kickoff-guide/competition-season",
-        color: "from-[var(--accent)] to-[var(--primary)]",
+        color: "from-blue-500 to-emerald-500",
         bgColor: "bg-blue-50 dark:bg-blue-950/20",
         borderColor: "border-blue-200 dark:border-blue-800"
     },
@@ -44,7 +44,7 @@ const sections = [
         description: "Collect objective, subjective, and pit data. Calculate OPR, EPA, and CCWM. Build picklists and create winning match strategies.",
         icon: Database,
         href: "/info/kickoff-guide/scouting-data",
-        color: "from-[var(--accent)] to-[var(--primary)]",
+        color: "from-blue-500 to-emerald-500",
         bgColor: "bg-blue-50 dark:bg-blue-950/20",
         borderColor: "border-blue-200 dark:border-blue-800"
     },
@@ -53,7 +53,7 @@ const sections = [
         description: "Quick reference guide covering competition structure, ranking points, robot tiers, drafting strategies, and essential FRC vocabulary.",
         icon: BookOpen,
         href: "/info/strategy",
-        color: "from-[var(--accent)] to-[var(--primary)]",
+        color: "from-blue-500 to-emerald-500",
         bgColor: "bg-blue-50 dark:bg-blue-950/20",
         borderColor: "border-blue-200 dark:border-blue-800"
     }
@@ -67,11 +67,11 @@ export default function KickoffGuidePage() {
             <main className="container mx-auto px-4 py-12 max-w-7xl">
                 {/* Hero Header */}
                 <header className="mb-16 text-center space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--primary)] text-white mb-4 shadow-lg">
-                        <Rocket className="w-10 h-10" />
+                    <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-emerald-600 text-white mb-4 shadow-lg">
+                        <Rocket className="w-10 h-10 text-white" />
                     </div>
                     <h1 className="text-6xl md:text-7xl font-black tracking-tight">
-                        <span className="bg-gradient-to-r from-[var(--accent)] via-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-blue-600 via-emerald-600 to-blue-600 bg-clip-text text-transparent">
                             FRC Kickoff Guide
                         </span>
                     </h1>
@@ -132,12 +132,7 @@ export default function KickoffGuidePage() {
                                 >
                                     <div className={`absolute inset-0 bg-gradient-to-br ${section.color} opacity-0 group-hover:opacity-5 rounded-2xl transition-opacity duration-300`}></div>
 
-                                    <div
-                                        className="inline-flex p-3 rounded-xl mb-4"
-                                        style={{
-                                            background: "linear-gradient(135deg, var(--accent), var(--primary))",
-                                            border: "1px solid var(--sidebar-border)"
-                                        }}>
+                                    <div className="inline-flex p-3 rounded-xl mb-4 bg-gradient-to-br from-blue-500 to-emerald-600 border border-blue-200 dark:border-blue-800">
                                         <Icon className="w-6 h-6 text-white" />
                                     </div>
 

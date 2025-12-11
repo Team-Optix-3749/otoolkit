@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Drawer,
   DrawerClose,
@@ -33,6 +34,7 @@ import {
 } from "@/components/ui/drawer";
 
 import { Separator } from "@/components/ui/separator";
+import NavigationMenuDemo from "@/components/NavigationMenuDemo";
 import type { FullUserData, User } from "@/lib/types/db";
 import { getProfileImageUrl } from "@/lib/supabase/supabase";
 
@@ -73,15 +75,15 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     icon: <BookOpen className="h-5 w-5" />,
-    label: "Kickoff Guide",
-    url: "/info/kickoff-guide",
-    msg: "Opening Kickoff Guide"
+    label: "Info",
+    url: "/info",
+    msg: "Open Info"
   },
   {
     icon: <SearchCode className="h-5 w-5" />,
     label: "Scouting",
-    url: "/scouting",
-    msg: "Lets go scout!",
+    url: "/info/kickoff-guide/scouting-data",
+    msg: "Under Construction",
     func: () => {
       toast.warning("Under Construction");
       return false;
@@ -361,25 +363,27 @@ function Desktop({
       <div className="bg-card/80 backdrop-blur-xl border border-border rounded-2xl shadow-2xl px-6 py-3 transition-all duration-300 ease-in-out">
         <div className="flex items-center justify-between space-x-8 transition-all duration-300 ease-in-out">
           <nav className="flex items-center space-x-2 transition-all duration-300 ease-in-out">
-            {navItems.map((item, index) => (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100"
-                key={index}
-                onClick={onNavigate.bind(null, {
-                  url: item.url,
-                  msg: item.msg,
-                  func: item.func
-                })}>
-                <div className="size-4 transition-all duration-300 ease-in-out">
-                  {item.icon}
-                </div>
-                <span className="text-sm font-medium transition-all duration-300 ease-in-out">
-                  {item.label}
-                </span>
-              </Button>
-            ))}
+            {navItems.map((item, index) => {
+              if (item.label === "Info") {
+                return <NavigationMenuDemo key={index} />;
+              }
+
+              return (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100"
+                  key={index}
+                  onClick={onNavigate.bind(null, {
+                    url: item.url,
+                    msg: item.msg,
+                    func: item.func
+                  })}>
+                  <div className="size-4 transition-all duration-300 ease-in-out">{item.icon}</div>
+                  <span className="text-sm font-medium transition-all duration-300 ease-in-out">{item.label}</span>
+                </Button>
+              );
+            })}
 
             {user &&
               AUTHED_ITEMS.map((item, index) => (

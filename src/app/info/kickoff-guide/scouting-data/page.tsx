@@ -3,6 +3,21 @@ import { Database, ClipboardList, BarChart3, Users, ArrowLeft, ExternalLink, Tre
 import Link from "next/link";
 
 export default function ScoutingDataPage() {
+    const stepColorClasses: Record<string, string> = {
+        blue: 'bg-blue-50 dark:bg-blue-950/20 rounded-xl border border-blue-200 dark:border-blue-800',
+        purple: 'bg-purple-50 dark:bg-purple-950/20 rounded-xl border border-purple-200 dark:border-purple-800',
+        cyan: 'bg-cyan-50 dark:bg-cyan-950/20 rounded-xl border border-cyan-200 dark:border-cyan-800',
+        emerald: 'bg-emerald-50 dark:bg-emerald-950/20 rounded-xl border border-emerald-200 dark:border-emerald-800',
+        orange: 'bg-orange-50 dark:bg-orange-950/20 rounded-xl border border-orange-200 dark:border-orange-800'
+    };
+
+    const stepBadgeGradientClasses: Record<string, string> = {
+        blue: 'from-blue-400 to-blue-600',
+        purple: 'from-purple-400 to-purple-600',
+        cyan: 'from-cyan-400 to-cyan-600',
+        emerald: 'from-emerald-400 to-emerald-600',
+        orange: 'from-orange-400 to-orange-600'
+    };
     return (
         <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50">
             <NavbarServerConfig />
@@ -276,8 +291,8 @@ export default function ScoutingDataPage() {
                                         color: "orange"
                                     }
                                 ].map((item, index) => (
-                                    <div key={index} className={`flex items-start gap-4 p-5 bg-${item.color}-50 dark:bg-${item.color}-950/20 rounded-xl border border-${item.color}-200 dark:border-${item.color}-800`}>
-                                        <div className={`flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-${item.color}-400 to-${item.color}-600 flex items-center justify-center text-white font-bold shadow-lg`}>
+                                    <div key={index} className={`flex items-start gap-4 p-5 ${stepColorClasses[item.color as keyof typeof stepColorClasses]}`}>
+                                        <div className={`flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br ${stepBadgeGradientClasses[item.color as keyof typeof stepBadgeGradientClasses]} flex items-center justify-center text-white font-bold shadow-lg`}>
                                             {index + 1}
                                         </div>
                                         <div>

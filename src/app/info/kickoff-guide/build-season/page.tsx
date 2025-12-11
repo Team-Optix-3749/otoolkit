@@ -3,6 +3,21 @@ import { Wrench, Calendar, Rocket, Users, ArrowLeft, ExternalLink, Clock, Target
 import Link from "next/link";
 
 export default function BuildSeasonPage() {
+    const phaseColorClasses: Record<string, string> = {
+        blue: 'bg-blue-50 dark:bg-blue-950/20 rounded-2xl border border-blue-200 dark:border-blue-800',
+        purple: 'bg-purple-50 dark:bg-purple-950/20 rounded-2xl border border-purple-200 dark:border-purple-800',
+        cyan: 'bg-cyan-50 dark:bg-cyan-950/20 rounded-2xl border border-cyan-200 dark:border-cyan-800',
+        emerald: 'bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-200 dark:border-emerald-800',
+        orange: 'bg-orange-50 dark:bg-orange-950/20 rounded-2xl border border-orange-200 dark:border-orange-800'
+    };
+
+    const phaseBadgeClasses: Record<string, string> = {
+        blue: 'bg-blue-600',
+        purple: 'bg-purple-600',
+        cyan: 'bg-cyan-600',
+        emerald: 'bg-emerald-600',
+        orange: 'bg-orange-600'
+    };
     return (
         <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-50">
             <NavbarServerConfig />
@@ -181,9 +196,9 @@ export default function BuildSeasonPage() {
                                 color: "orange"
                             }
                         ].map((phase, index) => (
-                            <div key={index} className={`p-6 bg-${phase.color}-50 dark:bg-${phase.color}-950/20 rounded-2xl border border-${phase.color}-200 dark:border-${phase.color}-800`}>
+                            <div key={index} className={`p-6 ${phaseColorClasses[phase.color as keyof typeof phaseColorClasses]}`}>
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className={`px-3 py-1 rounded-full bg-${phase.color}-600 text-white text-sm font-bold`}>
+                                    <div className={`px-3 py-1 rounded-full text-white text-sm font-bold ${phaseBadgeClasses[phase.color as keyof typeof phaseBadgeClasses]}`}>
                                         {phase.day}
                                     </div>
                                     <h3 className="text-xl font-bold">{phase.title}</h3>
