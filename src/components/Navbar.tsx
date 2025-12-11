@@ -21,22 +21,27 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger
 } from "@/components/ui/drawer";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle
+} from "@/components/ui/navigation-menu";
 
 import { Separator } from "@/components/ui/separator";
-import NavigationMenuDemo from "@/components/NavigationMenuDemo";
-import type { FullUserData, User } from "@/lib/types/db";
+import type { FullUserData } from "@/lib/types/db";
 import { getProfileImageUrl } from "@/lib/supabase/supabase";
+import { cn } from "@/lib/utils";
 
 type NavItem = {
   showInMinimal?: boolean;
@@ -45,6 +50,11 @@ type NavItem = {
   url: string;
   msg?: string;
   func?: () => boolean;
+  children?: {
+    title: string;
+    href: string;
+    description: string;
+  }[];
 };
 
 const USER_ITEM: NavItem = {
@@ -77,12 +87,24 @@ const NAV_ITEMS: NavItem[] = [
     icon: <BookOpen className="h-5 w-5" />,
     label: "Info",
     url: "/info",
-    msg: "Open Info"
+    msg: "Open Info",
+    children: [
+      {
+        title: "Kickoff Guide",
+        href: "/info/kickoff-guide",
+        description: "What to expect at kickoff."
+      },
+      {
+        title: "Strategy Home",
+        href: "/info/strategy",
+        description: "Guide to strategy"
+      }
+    ]
   },
   {
     icon: <SearchCode className="h-5 w-5" />,
     label: "Scouting",
-    url: "/info/kickoff-guide/scouting-data",
+    url: "/api/redirects/scouting",
     msg: "Under Construction",
     func: () => {
       toast.warning("Under Construction");
@@ -95,12 +117,6 @@ const NAV_ITEMS: NavItem[] = [
     url: "/outreach",
     msg: "Going to the Outreach Sheet"
   }
-  // {
-  //   icon: <Settings className="h-5 w-5" />,
-  //   label: "Admin",
-  //   url: "/admin",
-  //   msg: "Going to Admin"
-  // }
 ];
 
 const AUTHED_ITEMS: NavItem[] = [
@@ -125,16 +141,16 @@ type ChildProps = {
   onNavigate: (url: { url: string; msg?: string }) => void;
 } & ReturnType<typeof useNavbar>;
 
-export default function Navbar({ }) {
+export default function Navbar({}) {
   const router = useRouter();
 
-  const { isSmallScreen, hasTouch } = useIsMobile(true);
+  const { isSmallScreen } = useIsMobile(true);
   const state = useNavbar();
   const isHydrated = useIsMounted();
 
   const { user } = useUser();
 
-  if (!isHydrated) return null; //<NavbarSkeleton navItems={allItems} />;
+  if (!isHydrated) return null;
 
   const navItems = state.renderMinimal
     ? NAV_ITEMS.filter((item) => item.showInMinimal)
@@ -151,7 +167,7 @@ export default function Navbar({ }) {
   }) {
     if (!func()) return;
 
-    toast(`${msg}`);
+    if (msg) toast(`${msg}`);
     router.replace(url);
   };
 
@@ -299,7 +315,9 @@ function Desktop({
   setExpanded,
   defaultExpanded: defaultToShown
 }: ChildProps) {
+  const [hovered, setHovered] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+
   const navbarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -307,147 +325,174 @@ function Desktop({
   }, [isVisible, setExpanded]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+    if (navbarRef.current) {
+      navbarRef.current.onmouseenter = () => setHovered(true);
+      navbarRef.current.onmouseleave = () => setHovered(false);
 
-      if (currentScrollY >= 100) {
+      const scrollHandler = () => {
+        const belowScrollThreshold = window.scrollY >= 100;
+
+        if (hovered) {
+          setIsVisible(true);
+          return;
+        }
+
+        if (belowScrollThreshold) {
+          setIsVisible(false);
+          return;
+        }
+
+        if (defaultToShown) {
+          setIsVisible(true);
+          return;
+        }
+
         setIsVisible(false);
-      } else {
-        setIsVisible(true);
-      }
-    };
+      };
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const DEADBAND = 10;
+      window.addEventListener("scroll", scrollHandler);
 
-      const currentScrollY = window.scrollY;
-      const rect = navbarRef.current?.getBoundingClientRect();
-
-      if (!rect) return;
-
-      if (
-        e.clientY > rect.top - DEADBAND &&
-        e.clientY < rect.bottom + DEADBAND &&
-        e.clientX > rect.left &&
-        e.clientX < rect.right
-      ) {
-        setIsVisible(true);
-      } else if (currentScrollY >= 100 || !defaultToShown) {
-        setIsVisible(false);
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-
-    if (defaultToShown) {
-      window.addEventListener("scroll", handleScroll);
-      handleScroll();
+      scrollHandler();
     }
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, [defaultToShown, navbarRef, setIsVisible]);
-
-  useEffect(() => {
-    setIsVisible(defaultToShown);
-  }, [defaultToShown]);
+  }, [hovered, defaultToShown, setHovered, setIsVisible, navbarRef]);
 
   return (
     <div
       ref={navbarRef}
       data-navbar-root
-      className={`fixed top-2 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ease-in-out w-max ${isVisible ? "translate-y-0" : "-translate-y-full"
-        }`}>
+      className={`fixed top-2 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ease-in-out w-max ${
+        isVisible ? "translate-y-0" : "-translate-y-[calc(100%-1rem)]"
+      }`}>
       <div className="bg-card/80 backdrop-blur-xl border border-border rounded-2xl shadow-2xl px-6 py-3 transition-all duration-300 ease-in-out">
         <div className="flex items-center justify-between space-x-8 transition-all duration-300 ease-in-out">
-          <nav className="flex items-center space-x-2 transition-all duration-300 ease-in-out">
-            {navItems.map((item, index) => {
-              if (item.label === "Info") {
-                return <NavigationMenuDemo key={index} />;
-              }
+          <NavigationMenu>
+            <NavigationMenuList>
+              {navItems.map((item, index) => {
+                return (
+                  <NavigationMenuItem key={index}>
+                    <NavigationMenuTrigger className="bg-transparent hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[active]:bg-accent/50 data-[state=open]:bg-accent/50">
+                      <div className="flex items-center space-x-2">
+                        <div className="size-5">{item.icon}</div>
+                        <span className="ml-1 text-foreground">
+                          {item.label}
+                        </span>
+                      </div>
+                    </NavigationMenuTrigger>
+                    {item.children && item.children.length > 0 && (
+                      <NavigationMenuContent>
+                        <NavigationMenuList className="px-3">
+                          <ul className="grid w-[300px] gap-4 p-2">
+                            {item.children.map((child, childIndex) => (
+                              <ListItem
+                                key={childIndex}
+                                href={child.href}
+                                title={child.title}>
+                                {child.description}
+                              </ListItem>
+                            ))}
+                          </ul>
+                        </NavigationMenuList>
+                      </NavigationMenuContent>
+                    )}
+                  </NavigationMenuItem>
+                );
+              })}
 
-              return (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100"
-                  key={index}
-                  onClick={onNavigate.bind(null, {
-                    url: item.url,
-                    msg: item.msg,
-                    func: item.func
-                  })}>
-                  <div className="size-4 transition-all duration-300 ease-in-out">{item.icon}</div>
-                  <span className="text-sm font-medium transition-all duration-300 ease-in-out">{item.label}</span>
-                </Button>
-              );
-            })}
+              {user &&
+                AUTHED_ITEMS.map((item, index) => (
+                  <NavigationMenuItem key={`auth-${index}`}>
+                    <NavigationMenuLink
+                      href={item.url}
+                      className={cn(
+                        navigationMenuTriggerStyle(),
+                        "bg-transparent hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground data-[active]:bg-accent/50 data-[state=open]:bg-accent/50"
+                      )}
+                      onClick={(e) => {
+                        if (item.func && !item.func()) {
+                          e.preventDefault();
+                          return;
+                        }
+                        if (item.msg) toast(item.msg);
+                      }}>
+                      <div className="flex items-center space-x-2">
+                        <div className="size-4">{item.icon}</div>
+                        <span>{item.label}</span>
+                      </div>
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+                ))}
+            </NavigationMenuList>
+          </NavigationMenu>
 
-            {user &&
-              AUTHED_ITEMS.map((item, index) => (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100"
-                  key={index}
-                  onClick={onNavigate.bind(null, {
-                    url: item.url,
-                    msg: item.msg,
-                    func: item.func
-                  })}>
-                  <div className="size-4 transition-all duration-300 ease-in-out">
-                    {item.icon}
-                  </div>
-                  <span className="text-sm font-medium transition-all duration-300 ease-in-out">
-                    {item.label}
+          {user ? (
+            <div className="flex items-center space-x-3 pl-6 ml-2 border-l border-border">
+              <Link
+                href={USER_ITEM.url}
+                className="flex items-center space-x-3 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100 group">
+                <div className="hidden flex-col items-start md:flex">
+                  <span className="text-sm font-medium text-foreground underline transition-all duration-200 ease-in-out decoration-transparent group-hover:decoration-current">
+                    {user?.name || "Unknown Name"}
                   </span>
-                </Button>
-              ))}
-
-            {user ? (
-              <div className="flex items-center space-x-3 pl-6 ml-2 border-l border-border">
-                <Link
-                  href={USER_ITEM.url}
-                  className="flex items-center space-x-3 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100 group">
-                  <div className="hidden flex-col items-start md:flex">
-                    <span className="text-sm font-medium text-foreground underline transition-all duration-200 ease-in-out decoration-transparent group-hover:decoration-current">
-                      {user?.name || "Unknown Name"}
-                    </span>
-                    <span className="text-sm font-sm text-muted-foreground">
-                      {user?.role
-                        ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
-                        : "? Role ?"}
-                    </span>
-                  </div>
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage
-                      src={getProfileImageUrl(user)}
-                      alt={user?.name || "Unknown Name"}
-                      className="rounded-full"
-                    />
-                    <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
-                      {(user?.name || "U").charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                </Link>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-3 pl-7 ml-2 border-l border-border">
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="flex items-center space-x-3"
-                  onClick={onNavigate.bind(null, LOGIN_ITEM)}>
-                  <UserIcon className="h-4 w-4" />
-                  <span className="text-sm font-medium">Log In</span>
-                </Button>
-              </div>
-            )}
-          </nav>
+                  <span className="text-sm font-sm text-muted-foreground">
+                    {user?.role
+                      ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+                      : "? Role ?"}
+                  </span>
+                </div>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage
+                    src={getProfileImageUrl(user)}
+                    alt={user?.name || "Unknown Name"}
+                    className="rounded-full"
+                  />
+                  <AvatarFallback className="bg-muted text-muted-foreground text-xs rounded-full flex items-center justify-center h-full w-full">
+                    {(user?.name || "U").charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-3 pl-7 ml-2 border-l border-border">
+              <Button
+                variant="default"
+                size="sm"
+                className="flex items-center space-x-3"
+                onClick={onNavigate.bind(null, LOGIN_ITEM)}>
+                <UserIcon className="h-4 w-4" />
+                <span className="text-sm font-medium">Log In</span>
+              </Button>
+            </div>
+          )}
         </div>
       </div>
+      <div className="h-4 w-full"></div>
     </div>
   );
 }
+
+const ListItem = ({
+  className,
+  title,
+  children,
+  href,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof NavigationMenuLink> & {
+  title: string;
+}) => {
+  return (
+    <li>
+      <NavigationMenuLink
+        href={href!}
+        className={cn(
+          "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+          className
+        )}
+        {...props}>
+        <div className="text-sm font-medium leading-none">{title}</div>
+        <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+          {children}
+        </p>
+      </NavigationMenuLink>
+    </li>
+  );
+};
