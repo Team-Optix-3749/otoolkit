@@ -364,10 +364,6 @@ function Desktop({
         <div className="flex items-center justify-between space-x-8 transition-all duration-300 ease-in-out">
           <nav className="flex items-center space-x-2 transition-all duration-300 ease-in-out">
             {navItems.map((item, index) => {
-              if (item.label === "Info") {
-                return <NavigationMenuDemo key={index} />;
-              }
-
               return (
                 <Button
                   variant="ghost"
