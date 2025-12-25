@@ -16,22 +16,21 @@ import {
   DialogTitle
 } from "@/components/ui/dialog";
 import { Edit2, Minus, Plus } from "lucide-react";
-import type { UserData } from "@/lib/types/db";
+import { ActivitySummary } from "@/lib/types/db";
+
+type EditUserDialogProps = {
+  userData: { [K in keyof ActivitySummary]: NonNullable<ActivitySummary[K]> };
+  refreshFunc?: () => void;
+};
 
 export default function EditUserDialog({
   userData,
   refreshFunc
-}: {
-  userData: UserData;
-  refreshFunc?: () => void;
-}) {
+}: EditUserDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"add" | "subtract">("add");
   const [adjustment, setAdjustment] = useState(0);
-  const [displayName, setDisplayName] = useState(
-    userData.name ?? "Unknown User"
-  );
 
   useEffect(() => {
     if (open) {
@@ -40,26 +39,19 @@ export default function EditUserDialog({
     }
   }, [open]);
 
-  useEffect(() => {
-    setDisplayName(userData.name ?? "Unknown User");
-  }, [userData.name]);
-
   const signedAdjustment = useMemo(() => {
     const magnitude = Math.abs(adjustment);
     return mode === "add" ? magnitude : -magnitude;
   }, [adjustment, mode]);
 
-  const projectedTotal = (userData.outreach_minutes || 0) + signedAdjustment;
+  const projectedTotal =
+    (userData.user_credited_minutes || 0) + signedAdjustment;
+  const isSubmitDisabled = loading || adjustment <= 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitDisabled) return;
     setLoading(true);
-
-    if (signedAdjustment === 0) {
-      toast.error("Enter a number of minutes to adjust by.");
-      setLoading(false);
-      return;
-    }
 
     if (projectedTotal < 0) {
       toast.error("Resulting total cannot be negative.");
@@ -67,15 +59,19 @@ export default function EditUserDialog({
       return;
     }
 
+    if (!userData) return;
+
     const state = await manualModifyOutreachHours(
-      userData.user,
+      userData.user_id,
       signedAdjustment
     );
 
     switch (state) {
       case BaseStates.SUCCESS:
         toast.success(
-          `${displayName} now has ${formatMinutes(Math.max(0, projectedTotal))}`
+          `${userData.user_name} now has ${formatMinutes(
+            Math.max(0, projectedTotal)
+          )}`
         );
         setOpen(false);
         refreshFunc?.();
@@ -83,7 +79,7 @@ export default function EditUserDialog({
 
       case BaseStates.ERROR:
       default:
-        toast.error(`Failed to update ${displayName}'s hours`);
+        toast.error(`Failed to update ${userData.user_name}'s hours`);
         break;
     }
 
@@ -92,13 +88,11 @@ export default function EditUserDialog({
 
   const quickAdjustments = [15, 30, 60, 90];
 
-  const handleQuickAdd = (minutes: number) => {
-    setMode("add");
-    setAdjustment(minutes);
-  };
-
-  const handleQuickSubtract = (minutes: number) => {
-    setMode("subtract");
+  const handleQuickSelect = (
+    minutes: number,
+    direction: "add" | "subtract"
+  ) => {
+    setMode(direction);
     setAdjustment(minutes);
   };
 
@@ -115,10 +109,9 @@ export default function EditUserDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            {/** display current user formatted hours */}
-            <p className="text-xl">Current Logged Time:</p>
-            <p className="text-xl text-muted-foreground">
-              {formatMinutes(userData.outreach_minutes || 0)}
+            <p className="text-sm text-muted-foreground">Current Logged Time</p>
+            <p className="text-xl font-semibold">
+              {formatMinutes(userData.user_credited_minutes || 0)}
             </p>
           </div>
 
@@ -160,7 +153,7 @@ export default function EditUserDialog({
                 }}
               />
               <p className="text-sm text-muted-foreground">
-                Resulting total: {formatMinutes(projectedTotal)}
+                Resulting total: {formatMinutes(Math.max(0, projectedTotal))}
               </p>
             </div>
 
@@ -171,7 +164,7 @@ export default function EditUserDialog({
                   type="button"
                   variant="secondary"
                   size="sm"
-                  onClick={() => handleQuickAdd(minutes)}>
+                  onClick={() => handleQuickSelect(minutes, "add")}>
                   +{formatMinutes(minutes)}
                 </Button>
               ))}
@@ -181,7 +174,7 @@ export default function EditUserDialog({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleQuickSubtract(minutes)}>
+                  onClick={() => handleQuickSelect(minutes, "subtract")}>
                   -{formatMinutes(minutes)}
                 </Button>
               ))}
@@ -191,10 +184,11 @@ export default function EditUserDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}>
+              onClick={() => setOpen(false)}
+              disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={isSubmitDisabled}>
               {loading ? "Updating..." : "Update"}
             </Button>
           </div>

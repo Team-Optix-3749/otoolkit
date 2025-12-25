@@ -13,7 +13,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 // Data
-import { createEvent } from "@/lib/db/outreach";
+import { createOutreachEvent } from "@/lib/db/outreach";
 // Feedback
 import { toast } from "sonner";
 // Icons
@@ -43,7 +43,7 @@ export default function CreateEventDialog({
 
     setLoading(true);
     try {
-      const [error, created] = await createEvent({
+      const [error, created] = await createOutreachEvent({
         name: formData.name,
         date: formData.date
       });

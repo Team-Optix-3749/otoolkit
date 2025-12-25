@@ -3,7 +3,11 @@
 import { useCallback, useMemo, useState } from "react";
 import useSWR from "swr";
 
-import { fetchEvents, fetchSessionsForEvent } from "@/lib/db/outreach";
+import {
+  fetchOutreachEvents,
+  fetchOutreachEventSessions
+} from "@/lib/db/outreach";
+import { fetchActivitySummaryByEvent } from "@/lib/db/activity";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -13,7 +17,7 @@ import EventsList from "./EventsList";
 import EventDetails from "./EventDetails";
 
 import { Calendar } from "lucide-react";
-import type { OutreachEvent, OutreachSession } from "@/lib/types/db";
+import type { ActivityEvent, ActivitySession } from "@/lib/types/db";
 
 type ManageEventsContentProps = {
   variant?: "page" | "sheet";
@@ -25,12 +29,12 @@ export default function ManageEventsContent({
   const isMobile = useIsMobile();
   const isSheet = variant === "sheet";
 
-  const [selectedEvent, setSelectedEvent] = useState<OutreachEvent | null>(
+  const [selectedEvent, setSelectedEvent] = useState<ActivityEvent | null>(
     null
   );
 
-  const eventsFetcher = useCallback(async (): Promise<OutreachEvent[]> => {
-    const [error, data] = await fetchEvents();
+  const eventsFetcher = useCallback(async (): Promise<ActivityEvent[]> => {
+    const [error, data] = await fetchOutreachEvents();
 
     if (error || !data) {
       throw new Error(error ?? "Failed to load events");
@@ -45,10 +49,10 @@ export default function ManageEventsContent({
     mutate: mutateEvents
   } = useSWR("outreach-events", eventsFetcher);
 
-  const sessionsFetcher = useCallback(async (): Promise<OutreachSession[]> => {
-    if (!selectedEvent?.name) return [];
+  const sessionsFetcher = useCallback(async (): Promise<ActivitySession[]> => {
+    if (!selectedEvent?.event_name) return [];
 
-    const [error, data] = await fetchSessionsForEvent(selectedEvent.name);
+    const [error, data] = await fetchOutreachEventSessions(selectedEvent.id);
 
     if (error || !data) {
       throw new Error(error ?? "Failed to load sessions");
@@ -61,6 +65,27 @@ export default function ManageEventsContent({
     selectedEvent ? `outreach-sessions-${selectedEvent.id}` : null,
     sessionsFetcher
   );
+
+  const { data: eventSummaries } = useSWR(
+    selectedEvent ? `activity-summary-${selectedEvent.event_name}` : null,
+    async () => {
+      if (!selectedEvent?.id) return [];
+      const [, data] = await fetchActivitySummaryByEvent(selectedEvent.id);
+      return data;
+    }
+  );
+
+  const totals = useMemo(() => {
+    if (!eventSummaries?.length) return { raw: 0, credited: 0 };
+    return eventSummaries.reduce(
+      (acc, row) => {
+        acc.raw += row.minutes ?? 0;
+        acc.credited += row.user_credited_minutes ?? 0;
+        return acc;
+      },
+      { raw: 0, credited: 0 }
+    );
+  }, [eventSummaries]);
 
   const handleEventCreated = useCallback(() => mutateEvents(), [mutateEvents]);
   const handleHoursLogged = useCallback(
@@ -76,7 +101,7 @@ export default function ManageEventsContent({
     setSelectedEvent(null);
   }, [mutateEvents]);
 
-  const handleEventSelect = useCallback((event: OutreachEvent) => {
+  const handleEventSelect = useCallback((event: ActivityEvent) => {
     setSelectedEvent(event);
   }, []);
 
@@ -140,12 +165,12 @@ export default function ManageEventsContent({
             onEventSelect={handleEventSelect}
             onEventDeleted={handleEventDeleted}
             onHoursLogged={handleHoursLogged}
-            isMobile={isMobile}
             variant={variant}
           />
           <EventDetails
             selectedEvent={selectedEvent}
             sessions={sessions || []}
+            totals={totals}
             onHoursLogged={handleHoursLogged}
             onSessionDeleted={handleSessionDeleted}
             variant={variant}

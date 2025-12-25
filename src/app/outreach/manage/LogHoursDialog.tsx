@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { toast } from "sonner";
-import { createSessionsBulk, updateEvent } from "@/lib/db/outreach";
+import {
+  bulkCreateOutreachEventSessions,
+  updateOutreachEvent
+} from "@/lib/db/outreach";
 import { getAllUsers } from "@/lib/db/server";
 import { formatMinutes, cn } from "@/lib/utils";
 import { logger } from "@/lib/logger";
@@ -42,10 +45,10 @@ import {
   Save,
   Calendar
 } from "lucide-react";
-import type { OutreachEvent, UserData } from "@/lib/types/db";
+import type { ActivityEvent, OutreachEvent, UserData } from "@/lib/types/db";
 
 interface LogHoursDialogProps {
-  event: OutreachEvent;
+  event: ActivityEvent;
   onHoursLogged: () => void;
   // Optional: parent can revalidate events after rename/date change
   onEventUpdated?: () => void;
@@ -70,9 +73,9 @@ export default function LogHoursDialog({
   const [submitting, setSubmitting] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
-  const [eventName, setEventName] = useState(event.name ?? "");
+  const [eventName, setEventName] = useState(event.event_name ?? "");
   const [eventDate, setEventDate] = useState(
-    event.date ? event.date.split(" ").at(0) ?? "" : ""
+    event.event_date ? event.event_date.split(" ").at(0) ?? "" : ""
   );
 
   const [submissions, setSubmissions] = useState<UserSubmission[]>([
@@ -86,20 +89,23 @@ export default function LogHoursDialog({
   // Reset editable event fields whenever dialog opens
   useEffect(() => {
     if (open) {
-      setEventName(event.name ?? "");
-      setEventDate(event.date ? event.date.split(" ").at(0) ?? "" : "");
+      setEventName(event.event_name ?? "");
+      setEventDate(
+        event.event_date ? event.event_date.split(" ").at(0) ?? "" : ""
+      );
     }
-  }, [open, event.name, event.date]);
+  }, [open, event.event_name, event.event_date]);
 
   useEffect(() => {
     if (open) {
       let hasChanges = false;
-      if (event.name !== eventName) hasChanges = true;
-      if ((event.date ?? "").split(" ").at(0) !== eventDate) hasChanges = true;
+      if (event.event_name !== eventName) hasChanges = true;
+      if ((event.event_date ?? "").split(" ").at(0) !== eventDate)
+        hasChanges = true;
 
       setIsSaveDisabled(!hasChanges);
     }
-  }, [eventName, eventDate, open, event.name, event.date]);
+  }, [eventName, eventDate, open, event.event_name, event.event_date]);
 
   const fetchUsers = useCallback(async () => {
     setFetchingUsers(true);
@@ -180,11 +186,10 @@ export default function LogHoursDialog({
 
     setSubmitting(true);
     try {
-      const [error] = await createSessionsBulk(
+      const [error] = await bulkCreateOutreachEventSessions(
         valid.map((s) => ({
-          userId: s.userId,
-          // DB schema uses OutreachSessions.event -> OutreachEvents.name
-          eventId: event.name ?? String(event.id),
+          user_id: s.userId,
+          event_id: event.id,
           minutes: s.minutes
         }))
       );
@@ -227,8 +232,8 @@ export default function LogHoursDialog({
     }
 
     if (
-      eventName === event.name &&
-      eventDate === (event.date ?? "").split(" ")[0]
+      eventName === event.event_name &&
+      eventDate === (event.event_date ?? "").split(" ")[0]
     ) {
       toast.message("No changes to save");
       return;
@@ -236,9 +241,9 @@ export default function LogHoursDialog({
 
     setSavingEvent(true);
     try {
-      const [error] = await updateEvent(event.id, {
-        name: eventName,
-        date: eventDate
+      const [error] = await updateOutreachEvent(event.id, {
+        event_name: eventName,
+        event_date: eventDate
       });
 
       if (error) {
@@ -267,7 +272,7 @@ export default function LogHoursDialog({
       <DialogContent className="sm:max-w-[750px] max-h-[85vh] overflow-y-auto space-y-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" /> Log Hours for {event.name}
+            <Clock className="h-5 w-5" /> Log Hours for {event.event_name}
           </DialogTitle>
         </DialogHeader>
 
@@ -477,8 +482,9 @@ function UserCombobox({
 }) {
   const [open, setOpen] = useState(false);
 
-  const currentUser = users.find((u) => u.user === value);
-  const fallbackDisplay = currentUser?.name ?? currentUser?.email ?? "Unknown";
+  const currentUser = users.find((u) => u.user_id === value);
+  const fallbackDisplay =
+    currentUser?.user_name ?? currentUser?.email ?? "Unknown";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -513,22 +519,24 @@ function UserCombobox({
             <CommandGroup>
               {users.map((user) => (
                 <CommandItem
-                  key={user.user}
-                  value={`${user.name ?? ""} ${user.email ?? ""} ${user.user}`}
+                  key={user.user_id}
+                  value={`${user.user_name ?? ""} ${user.email ?? ""} ${
+                    user.user_id
+                  }`}
                   onSelect={() => {
-                    onChange(user.user);
+                    onChange(user.user_id);
                     setOpen(false);
                   }}>
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      user.user === value ? "opacity-100" : "opacity-0"
+                      user.user_id === value ? "opacity-100" : "opacity-0"
                     )}
                   />
                   <span
                     className="truncate"
-                    title={user.name ?? user.email ?? "Unknown"}>
-                    {user.name ?? user.email ?? "Unknown"}
+                    title={user.user_name ?? user.email ?? "Unknown"}>
+                    {user.user_name ?? user.email ?? "Unknown"}
                   </span>
                 </CommandItem>
               ))}{" "}

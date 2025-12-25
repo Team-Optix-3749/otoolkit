@@ -3,6 +3,7 @@ import { getSBBrowserClient } from "@/lib/supabase/sbClient";
 
 import type { FullUserData, User } from "@/lib/types/db";
 import { getUserDataByUserId } from "@/lib/db/user";
+import { fetchUserActivitySummary } from "@/lib/db/activity";
 
 export function useUser() {
   const supabase = getSBBrowserClient();
@@ -11,12 +12,25 @@ export function useUser() {
 
   const combineUserData = useCallback(async (user: User) => {
     const [error, userData] = await getUserDataByUserId(user?.id || "");
+    const [activityError, activity] = await fetchUserActivitySummary(
+      user?.id || "",
+      ["build", "outreach"]
+    );
 
     if (error || !userData) {
       return;
     }
 
-    const union = { ...user, ...userData } as FullUserData;
+    const union = {
+      ...user,
+      ...userData,
+      ...activity
+    } as FullUserData;
+
+    if (activityError) {
+      // Activity data is optional; ignore errors silently for now
+      return union;
+    }
 
     return union;
   }, []);

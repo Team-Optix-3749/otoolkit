@@ -1,9 +1,9 @@
 import { MiddlewareConfig, NextRequest, NextResponse } from "next/server";
 
-import { hasPermission } from "./lib/permissions";
-import { getDisabledPages, runFlag } from "./lib/flags";
+import { fetchPermissionsForRole, hasPermission } from "./lib/rbac/rbac";
 import { getSBServerClient } from "./lib/supabase/sbServer";
 import { UserData } from "./lib/types/db";
+import { UserRole } from "./lib/rbac/types";
 
 const ROUTE_PERMISSIONS: Partial<
   Record<string, Parameters<typeof hasPermission>[1]>
@@ -13,15 +13,13 @@ const ROUTE_PERMISSIONS: Partial<
   settings: "settings:view"
 };
 
-const FLAG_EXEMPT_PAGES = new Set(["settings"]);
-
 export async function middleware(request: NextRequest) {
   const originalPath = request.nextUrl.pathname;
   const segments = originalPath.split("/").filter(Boolean);
   const page = segments.at(0);
 
   if (originalPath.startsWith("/ph")) {
-    return postHogMiddleware(request);
+    return posthogMiddleware(request);
   }
 
   let response = NextResponse.next({
@@ -45,43 +43,30 @@ export async function middleware(request: NextRequest) {
     }
   });
 
-  const claims = await supabase.auth.getClaims();
-
   if (!page) {
     return response;
   }
 
-  let role: UserData["role"] = "guest";
-  let userId: string | undefined;
+  let role: UserRole = "guest";
 
   const {
     data: { user }
   } = await supabase.auth.getUser();
 
   if (user) {
-    userId = user.id;
-
     const { data: userData } = await supabase
       .from("UserData")
-      .select("role")
-      .eq("user", user.id)
-      .limit(1)
-      .single();
+      .select("user_role")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
     if (userData) {
-      role = userData.role;
+      role = userData.user_role;
     }
   }
 
-  const disabled = await getDisabledPages(role);
-  if (!disabled) return response;
-
-  if (disabled.includes(page)) {
-    return mwRedirect(response, request.nextUrl.clone(), "/disabled", {
-      page: originalPath,
-      reason: "page_disabled"
-    });
-  }
+  // Pre-fetch permissions to populate cache for sync hasPermission checks
+  await fetchPermissionsForRole(role, supabase);
 
   const requiredPermission = ROUTE_PERMISSIONS[page];
   if (requiredPermission && !hasPermission(role, requiredPermission)) {
@@ -119,7 +104,7 @@ function mwRedirect(
   return redirect;
 }
 
-function postHogMiddleware(request: NextRequest) {
+function posthogMiddleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const hostname = url.pathname.startsWith("/ph/static/")
     ? "us-assets.i.posthog.com"

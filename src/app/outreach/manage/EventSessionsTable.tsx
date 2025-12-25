@@ -1,5 +1,5 @@
 // React
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { toast } from "sonner";
 import { formatMinutes } from "@/lib/utils";
@@ -9,7 +9,6 @@ import { logger } from "@/lib/logger";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -20,12 +19,17 @@ import {
 } from "@/components/ui/table";
 
 import { Clock, Trash2 } from "lucide-react";
-import type { OutreachEvent, OutreachSession } from "@/lib/types/db";
+import type {
+  ActivityEvent,
+  ActivitySession,
+  OutreachEvent,
+  OutreachSession
+} from "@/lib/types/db";
 import { UserInfo } from "@/components/UserInfo";
 
 interface EventSessionsTableProps {
-  event: OutreachEvent;
-  sessions: OutreachSession[];
+  event: ActivityEvent;
+  sessions: ActivitySession[];
   onSessionDeleted: () => void;
   compact?: boolean;
 }
@@ -102,7 +106,7 @@ export default function EventSessionsTable({
             {sessions.map((session) => (
               <TableRow key={session.id}>
                 <TableCell>
-                  <UserInfo userId={session.user} />
+                  <UserInfo userId={session.user_id} />
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">

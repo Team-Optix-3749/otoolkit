@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { deleteEvent } from "@/lib/db/outreach";
+import { deleteOutreachEvents } from "@/lib/db/outreach";
 
 import { Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,15 +9,14 @@ import LogHoursDialog from "./LogHoursDialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { logger } from "@/lib/logger";
-import type { OutreachEvent } from "@/lib/types/db";
+import type { ActivityEvent, OutreachEvent } from "@/lib/types/db";
 
 interface EventsListProps {
-  events: OutreachEvent[] | undefined;
-  selectedEvent: OutreachEvent | null;
-  onEventSelect: (event: OutreachEvent) => void;
+  events: ActivityEvent[] | undefined;
+  selectedEvent: ActivityEvent | null;
+  onEventSelect: (event: ActivityEvent) => void;
   onEventDeleted: () => void;
   onHoursLogged: () => void;
-  isMobile?: boolean;
   variant?: "page" | "sheet";
 }
 
@@ -27,7 +26,6 @@ export default function EventsList({
   onEventSelect,
   onEventDeleted,
   onHoursLogged,
-  isMobile = false,
   variant = "page"
 }: EventsListProps) {
   const isSheet = variant === "sheet";
@@ -42,7 +40,7 @@ export default function EventsList({
     }
 
     try {
-      const [error] = await deleteEvent(eventId);
+      const [error] = await deleteOutreachEvents(eventId);
 
       if (error) {
         throw new Error(error ?? "Failed to delete event");
@@ -90,10 +88,10 @@ export default function EventsList({
                   onClick={() => onEventSelect(event)}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold">{event.name}</h3>
+                      <h3 className="font-semibold">{event.event_name}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {event.date
-                          ? new Date(event.date).toLocaleDateString()
+                        {event.event_date
+                          ? new Date(event.event_date).toLocaleDateString()
                           : "N/A"}
                       </p>
                     </div>

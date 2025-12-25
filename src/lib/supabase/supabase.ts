@@ -1,7 +1,7 @@
 import { PostgrestSingleResponse } from "@supabase/supabase-js";
 import { getSBBrowserClient } from "./sbClient";
 import { logger } from "../logger";
-import type { User } from "../types/db";
+import type { FullUserData, User } from "../types/db";
 
 type SBRequestCallback<T, U extends PostgrestSingleResponse<T>> = (
   sb: ReturnType<typeof getSBBrowserClient>
@@ -21,10 +21,11 @@ export async function makeSBRequest<T, U extends PostgrestSingleResponse<T>>(
 
   return ret;
 }
-export function getProfileImageUrl(user?: User | null): string | undefined {
-  if (!user) return undefined;
 
-  // if (typeof user.avatar_url === "string" && user.avatar_url)
-  //   return user.avatar_url;
-  return user.user_metadata?.avatar_url;
+export function getProfileImageUrl(
+  user?: Pick<FullUserData, "avatar_url"> | null
+): string | undefined {
+  if (user?.avatar_url) return user.avatar_url;
+  // user metadata + google storage + custom bucket for user uploaded images???
+  return undefined;
 }

@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-import { fetchEvents } from "@/lib/db/outreach";
+import { fetchOutreachEvents } from "@/lib/db/outreach";
 import type { OutreachEvent } from "@/lib/types/db";
-import { formatPbDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 import {
   Card,
@@ -18,8 +18,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-import CreateEventDialog from "./manage/CreateEventDialog";
-import LogHoursDialog from "./manage/LogHoursDialog";
+import CreateEventDialog from "../manage/CreateEventDialog";
+import LogHoursDialog from "../manage/LogHoursDialog";
 
 import { CalendarCheck, Clock3, RefreshCcw, ArrowUpRight } from "lucide-react";
 
@@ -41,7 +41,10 @@ function getUpcomingEvents(events: OutreachEvent[]) {
         !Number.isNaN(time) && time >= now.getTime() - 1000 * 60 * 60 * 24 * 2
       );
     })
-    .sort((a, b) => new Date(a.date ?? "").getTime() - new Date(b.date ?? "").getTime())
+    .sort(
+      (a, b) =>
+        new Date(a.date ?? "").getTime() - new Date(b.date ?? "").getTime()
+    )
     .slice(0, MAX_VISIBLE_EVENTS);
 }
 
@@ -64,7 +67,7 @@ export default function OutreachQuickManageCard({
 
   const refreshEvents = useCallback(async () => {
     setLoading(true);
-    const [error, latestEvents] = await fetchEvents();
+    const [error, latestEvents] = await fetchOutreachEvents();
 
     if (error || !latestEvents) {
       const message = error ? `PocketBase error ${error}` : "No events found";
@@ -84,7 +87,6 @@ export default function OutreachQuickManageCard({
   const handleEventCreated = useCallback(() => {
     refreshEvents();
   }, [refreshEvents]);
-
 
   return (
     <Card className="min-h-[220px]">
@@ -128,7 +130,7 @@ export default function OutreachQuickManageCard({
                   <div>
                     <h3 className="font-medium text-sm">{event.name}</h3>
                     <p className="text-xs text-muted-foreground">
-                      {formatPbDate(event.date ?? "")}
+                      {formatDate(event.date ?? "")}
                     </p>
                   </div>
                   <Badge
