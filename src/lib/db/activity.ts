@@ -30,12 +30,18 @@ export async function fetchUserActivitySummary(
   return [null, data as ActivitySummary | null];
 }
 
+export type ActivitySortKey =
+  | "user_credited_minutes"
+  | "session_count"
+  | "user_name";
+export type ActivitySortDirection = "asc" | "desc";
+
 export async function fetchActivitySummariesPaginated(
   page: number,
   perPage: number,
   types: ActivityType[],
-  orderBy: string = "user_credited_minutes",
-  orderDirection: "asc" | "desc" = "desc"
+  orderBy: ActivitySortKey = "user_credited_minutes",
+  orderDirection: ActivitySortDirection = "desc"
 ): Promise<PaginatedResult<ActivitySummary> | null> {
   const from = (page - 1) * perPage;
   const to = from + perPage - 1;
@@ -46,6 +52,7 @@ export async function fetchActivitySummariesPaginated(
       .select("*", { count: "exact" })
       .in("activity_type", types)
       .order(orderBy, { ascending: orderDirection === "asc" })
+      .order("user_id", { ascending: true })
       .range(from, to)
   );
 

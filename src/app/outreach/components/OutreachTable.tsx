@@ -19,7 +19,11 @@ import ManageEventsSheet from "@/app/outreach/manage/ManageEventsSheet";
 import type { ActivitySummary, UserData } from "@/lib/types/db";
 import { UserInfo } from "@/components/UserInfo";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { fetchActivitySummariesPaginated } from "@/lib/db/activity";
+import {
+  fetchActivitySummariesPaginated,
+  type ActivitySortKey,
+  type ActivitySortDirection
+} from "@/lib/db/activity";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { OUTREACH } from "@/lib/types/queryKeys";
 
@@ -66,44 +70,47 @@ type SortConfig = {
   direction: SortDirection;
 };
 
+const SORT_KEY_TO_COLUMN: Record<SortKey, ActivitySortKey> = {
+  user: "user_name",
+  outreachMinutes: "user_credited_minutes",
+  events: "session_count"
+};
+
 const PAGE_SIZE = 15;
 
 type PaginatedResponse = NonNullable<
   Awaited<ReturnType<typeof fetchActivitySummariesPaginated>>
 >;
 
-function getUserSortValue(user: ActivitySummary): string {
-  return user.user_name?.toLowerCase() || "";
-}
+const getUserSortValue = (user: ActivitySummary): string =>
+  user.user_name?.toLowerCase() || "";
 
 function sortUsersList(users: ActivitySummary[], config: SortConfig) {
   const multiplier = config.direction === "ascending" ? 1 : -1;
 
-  const nonNullUsers = users.filter((user) =>
-    Object.keys(user).every(
-      (key) =>
-        user[key as keyof ActivitySummary] !== null &&
-        user[key as keyof ActivitySummary] !== undefined
-    )
-  ) as {
-    [K in keyof ActivitySummary]: NonNullable<ActivitySummary[K]>;
-  }[];
+  const fallbackIdCompare = (a: ActivitySummary, b: ActivitySummary) =>
+    (a.user_id || "").localeCompare(b.user_id || "");
 
-  return [...nonNullUsers].sort((a, b) => {
+  return [...users].sort((a, b) => {
     switch (config.key) {
       case "user": {
-        return (
-          getUserSortValue(a).localeCompare(getUserSortValue(b)) * multiplier
-        );
+        const diff =
+          getUserSortValue(a).localeCompare(getUserSortValue(b)) * multiplier;
+        return diff !== 0 ? diff : fallbackIdCompare(a, b);
       }
       case "outreachMinutes": {
-        return (a.user_credited_minutes - b.user_credited_minutes) * multiplier;
+        const diff =
+          ((a.user_credited_minutes ?? 0) - (b.user_credited_minutes ?? 0)) *
+          multiplier;
+        return diff !== 0 ? diff : fallbackIdCompare(a, b);
       }
       case "events": {
-        return (a.session_count - b.session_count) * multiplier;
+        const diff =
+          ((a.session_count ?? 0) - (b.session_count ?? 0)) * multiplier;
+        return diff !== 0 ? diff : fallbackIdCompare(a, b);
       }
       default:
-        return 0;
+        return fallbackIdCompare(a, b);
     }
   });
 }
@@ -147,6 +154,10 @@ export function OutreachTable({
   canManage: boolean;
   outreachMinutesThreshold: number;
 }) {
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: "outreachMinutes",
+    direction: "descending"
+  });
   const {
     data,
     error,
@@ -156,15 +167,19 @@ export function OutreachTable({
     isFetchingNextPage,
     status
   } = useInfiniteQuery<PaginatedResponse, Error>({
-    queryKey: OUTREACH.LEADERBOARD,
+    queryKey: [...OUTREACH.LEADERBOARD, sortConfig.key, sortConfig.direction],
     queryFn: async ({ pageParam = 1 }) => {
       const pageNum = typeof pageParam === "number" ? pageParam : 1;
+      const sortColumn = SORT_KEY_TO_COLUMN[sortConfig.key];
+      const sortDirection: ActivitySortDirection =
+        sortConfig.direction === "ascending" ? "asc" : "desc";
+
       const result = await fetchActivitySummariesPaginated(
         pageNum,
         PAGE_SIZE,
         ["outreach"],
-        "user_credited_minutes",
-        "desc"
+        sortColumn,
+        sortDirection
       );
 
       if (!result) {
@@ -184,14 +199,22 @@ export function OutreachTable({
   });
   const isMobile = useIsMobile();
 
-  const [sortConfig, setSortConfig] = useState<SortConfig>({
-    key: "outreachMinutes",
-    direction: "descending"
-  });
-
   const allUsers = useMemo(() => {
     if (!data?.pages?.length) return [];
-    return data.pages.flatMap((page) => page.items);
+
+    const seen = new Set<string>();
+    const merged: ActivitySummary[] = [];
+
+    data.pages.forEach((page) => {
+      page.items.forEach((item) => {
+        const id = item.user_id ?? "";
+        if (id && seen.has(id)) return;
+        if (id) seen.add(id);
+        merged.push(item);
+      });
+    });
+
+    return merged;
   }, [data]);
 
   const sortedUsers = useMemo(
