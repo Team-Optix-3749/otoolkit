@@ -6,12 +6,11 @@ import { Card } from "@/components/ui/card";
 import { RBACRulesPanel } from "./RBACRulesPanel";
 import { makeSBRequest } from "@/lib/supabase/supabase";
 import {
-  matchesPermission,
-  parsePermissionString,
   type Permission,
   type PermissionString,
   type UserRole
 } from "@/lib/types/rbac";
+import { matchesPermission, parsePermissionString } from "@/lib/rbac/matcher";
 
 // Simple client-side load states for RBAC access
 type LoadState =

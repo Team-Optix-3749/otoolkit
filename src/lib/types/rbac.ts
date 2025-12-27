@@ -1,12 +1,19 @@
+import z from "zod";
 import type { UserData } from "./db";
 import type { Tables, TablesInsert } from "./supabase";
 
 export type UserRole = UserData["user_role"];
 
-const Resource = ["outreach", "settings", "scouting", "users", "rbac"] as const;
-export type Resource = (typeof Resource)[number];
+export const Resources = [
+  "outreach",
+  "settings",
+  "scouting",
+  "users",
+  "rbac"
+] as const;
+export type Resource = (typeof Resources)[number];
 
-const Action = [
+export const Actions = [
   "view",
   "manage",
   "edit",
@@ -14,10 +21,10 @@ const Action = [
   "delete",
   "create"
 ] as const;
-export type Action = (typeof Action)[number];
+export type Action = (typeof Actions)[number];
 
-const Condition = ["own", "all", null] as const;
-export type Condition = (typeof Condition)[number];
+export const Conditions = ["own", "all", null] as const;
+export type Condition = (typeof Conditions)[number];
 
 export type Permission = {
   resource: Resource;
@@ -40,36 +47,34 @@ export type RBACRuleUpdate = Partial<
   Omit<TablesInsert<"rbac">, "id" | "created_at" | "updated_at">
 >;
 
-export function parsePermissionString(
-  permission: PermissionString
-): Permission {
-  const parts = permission.split(":") as [Resource, Action, Condition?];
-  return {
-    resource: parts[0],
-    action: parts[1],
-    condition: parts[2] ?? null
-  };
-}
+export type RoutePermissionsObject = {
+  [key: string]:
+    | PermissionString
+    | (RoutePermissionsObject & { base: PermissionString })
+    | null
+    | undefined;
+};
 
-export function formatPermissionString(
-  permission: Permission
-): PermissionString {
-  if (permission.condition) {
-    return `${permission.resource}:${permission.action}:${permission.condition}`;
-  }
-  return `${permission.resource}:${permission.action}`;
-}
+export const ResourceEnum = z.enum(Resources);
+export const ActionEnum = z.enum(Actions);
+export const ConditionEnum = z.enum(Conditions.filter((c) => c !== null));
 
-export function matchesPermission(
-  rule: { resource: string; action: string; condition: string | null },
-  permission: Permission
-): boolean {
-  const ruleCondition = rule.condition ?? null;
-  const permCondition = permission.condition ?? null;
+export const PermissionStringSchema = z.union([
+  z.templateLiteral([ResourceEnum, ":", ActionEnum, ":", ConditionEnum]),
+  z.templateLiteral([ResourceEnum, ":", ActionEnum])
+]);
 
-  return (
-    rule.resource === permission.resource &&
-    rule.action === permission.action &&
-    ruleCondition === permCondition
+export const RoutePermissionsSchema: z.ZodType<RoutePermissionsObject> =
+  z.record(
+    z.string(),
+    z
+      .union([
+        PermissionStringSchema,
+        z.lazy(() =>
+          RoutePermissionsSchema.and(z.object({ base: PermissionStringSchema }))
+        )
+      ])
+      .nullish()
   );
-}
+
+export type PermissionStringSchema = z.infer<typeof PermissionStringSchema>;

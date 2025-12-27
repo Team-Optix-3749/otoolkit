@@ -1,26 +1,20 @@
 import { MiddlewareConfig, NextRequest, NextResponse } from "next/server";
 
-import { fetchPermissionsForRole, hasPermission } from "./lib/rbac/rbac";
+import { hasPermission } from "./lib/rbac/rbac";
 import { getSBServerClient } from "./lib/supabase/sbServer";
-import { UserData } from "./lib/types/db";
 import { UserRole } from "./lib/types/rbac";
-
-const ROUTE_PERMISSIONS: Partial<
-  Record<string, Parameters<typeof hasPermission>[1]>
-> = {
-  outreach: "outreach:view",
-  scouting: "scouting:view",
-  settings: "settings:view"
-};
+import { getRequiredPermissionsForRoute } from "./lib/rbac/routePermissions";
+import { ensureRoutePermissionsInitialized } from "./lib/rbac/routePermissionsInit";
 
 export async function middleware(request: NextRequest) {
   const originalPath = request.nextUrl.pathname;
   const segments = originalPath.split("/").filter(Boolean);
-  const page = segments.at(0);
 
   if (originalPath.startsWith("/ph")) {
     return posthogMiddleware(request);
   }
+
+  await ensureRoutePermissionsInitialized();
 
   let response = NextResponse.next({
     request
@@ -43,7 +37,7 @@ export async function middleware(request: NextRequest) {
     }
   });
 
-  if (!page) {
+  if (!segments || !segments.length) {
     return response;
   }
 
@@ -65,11 +59,17 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Pre-fetch permissions to populate cache for sync hasPermission checks
-  await fetchPermissionsForRole(role, supabase);
+  const requiredPermissions = await getRequiredPermissionsForRoute(segments);
 
-  const requiredPermission = ROUTE_PERMISSIONS[page];
-  if (requiredPermission && !hasPermission(role, requiredPermission)) {
+  if (!requiredPermissions) {
+    return response;
+  }
+
+  const hasAllRequiredPermissions = await Promise.all(
+    requiredPermissions.map((permission) => hasPermission(role, permission))
+  ).then((results) => results.every(Boolean));
+
+  if (!hasAllRequiredPermissions) {
     if (user?.id) {
       return mwRedirect(response, request.nextUrl.clone(), "/unauthorized", {
         page: originalPath

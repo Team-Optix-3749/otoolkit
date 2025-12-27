@@ -25,10 +25,7 @@ export default function OutreachPage() {
   const { data: canManageData, isLoading: isCanManageLoading } = useQuery({
     queryKey: USER.CAN_MANAGE_OUTREACH(userData?.user_id || ""),
     queryFn: () => {
-      return hasPermission(
-        userData?.user_role || "guest",
-        "outreach:manage:all"
-      );
+      return hasPermission(userData?.user_role || "guest", "outreach:manage");
     }
   });
   const {

@@ -1,7 +1,6 @@
 "use server";
 
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
-import { getSBServerClient } from "../supabase/sbServer";
 import { makeSBRequest } from "../supabase/supabase";
 import { logger } from "../logger";
 import type {
@@ -18,7 +17,7 @@ import {
   invalidateCache,
   setCachedPermissions
 } from "./cache";
-import { parsePermissionString, matchesPermission } from "../types/rbac";
+import { parsePermissionString, matchesPermission } from "./matcher";
 
 export async function fetchPermissionsForRole(
   role: UserRole,
