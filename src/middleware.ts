@@ -6,12 +6,11 @@ import { UserRole } from "./lib/types/rbac";
 import { getRequiredPermissionsForRoute } from "./lib/rbac/routePermissions";
 import { ensureRoutePermissionsInitialized } from "./lib/rbac/routePermissionsInit";
 import { logger } from "./lib/logger";
+import { sanitizePathname } from "./lib/utils";
 
 export async function middleware(request: NextRequest) {
   const originalPath = request.nextUrl.pathname;
   const segments = originalPath.split("/").filter(Boolean);
-
-  logger.debug({ request }, "[Middleware] Processing request");
 
   if (originalPath.startsWith("/ph")) {
     return posthogMiddleware(request);
@@ -41,7 +40,6 @@ export async function middleware(request: NextRequest) {
   });
 
   if (!segments || !segments.length) {
-    logger.debug({ path: originalPath }, "[Middleware] Root route, allow");
     return response;
   }
 
@@ -64,7 +62,12 @@ export async function middleware(request: NextRequest) {
   }
 
   logger.debug(
-    { path: originalPath, role, userId: user?.id },
+    {
+      requestUrl: request.url,
+      nextUrl: response.url,
+      role,
+      userId: user?.id || "Unknown ID"
+    },
     "[Middleware] Resolved request role"
   );
 
@@ -82,7 +85,12 @@ export async function middleware(request: NextRequest) {
   ).then((results) => results.every(Boolean));
 
   logger.debug(
-    { path: originalPath, role, requiredPermissions, allowed: hasAllRequiredPermissions },
+    {
+      path: originalPath,
+      role,
+      requiredPermissions,
+      allowed: hasAllRequiredPermissions
+    },
     "[Middleware] Permission evaluation result"
   );
 
@@ -93,7 +101,7 @@ export async function middleware(request: NextRequest) {
         "[Middleware] Authenticated user lacks permissions, redirecting"
       );
       return mwRedirect(response, request.nextUrl.clone(), "/unauthorized", {
-        page: originalPath
+        next: originalPath
       });
     }
 
@@ -102,8 +110,11 @@ export async function middleware(request: NextRequest) {
       "[Middleware] Guest user requires login, redirecting"
     );
 
+    const next = sanitizePathname(request.nextUrl.pathname);
+    console.log(next);
+
     return mwRedirect(response, request.nextUrl.clone(), "/auth/login", {
-      next: request.nextUrl.pathname
+      next
     });
   }
 
