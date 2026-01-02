@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import UserAvatar from "@/components/UserAvatar";
 import type { FullUserData } from "@/lib/types/db";
-import { getUserDataByUserId } from "@/lib/db/user";
+import { getUserDataWithUserId } from "@/lib/db/user";
 
 type UserInfoProps = Partial<{
   user: Pick<FullUserData, "user_name" | "email" | "avatar_url">;
@@ -16,7 +16,7 @@ export function UserInfo({ user, userId, withoutEmail }: UserInfoProps) {
   useEffect(() => {
     if (userId && !user?.email) {
       (async () => {
-        const [error, fetchedUserData] = await getUserDataByUserId(userId);
+        const [error, fetchedUserData] = await getUserDataWithUserId(userId);
         if (!error && fetchedUserData) {
           setUserData({
             user_name: fetchedUserData.user_name,
