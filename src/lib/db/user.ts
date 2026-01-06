@@ -76,18 +76,18 @@ export async function fetchUserDataPaginated(
 }
 
 export async function fetchUserData(id: string): Promise<UserData | null> {
-  const [error, data] = await getUserDataByUserId(id);
+  const [error, data] = await getUserDataWithUserId(id);
   if (error || !data) {
     return null;
   }
   return data;
 }
 
-export async function getUserDataByUserId(
+export async function getUserDataWithUserId(
   userId: string
 ): Promise<[string | null, UserData | null]> {
   const { data, error } = await makeSBRequest(async (sb) =>
-    sb.from("UserData").select("*").eq("user_id", userId).limit(1).single()
+    sb.from("UserData").select("*").eq("user_id", userId).limit(1).maybeSingle()
   );
 
   if (error || !data) {
