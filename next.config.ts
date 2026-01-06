@@ -4,9 +4,6 @@ const nextConfig: NextConfig = {
   /* config options here */
   serverExternalPackages: ["pino", "pino-pretty"],
   skipTrailingSlashRedirect: true,
-  experimental: {
-    instrumentationHook: true
-  },
   eslint: {
     ignoreDuringBuilds: true
   }
