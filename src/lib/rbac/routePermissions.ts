@@ -1,5 +1,6 @@
 "use server";
 
+import posthog from "posthog-js";
 import { logger } from "../logger";
 import {
   RoutePermissionsMap,
@@ -19,6 +20,36 @@ const DEFAULT_ROUTE_PERMISSIONS = {
 } satisfies RoutePermissionsMap;
 
 let routePermissions = RoutePermissionsSchema.parse(DEFAULT_ROUTE_PERMISSIONS);
+
+// TTL cache for route permissions sync
+const ROUTE_PERMISSIONS_TTL_MS = 5 * 60 * 1000; // 5 minutes
+let lastSyncTimestamp = 0;
+
+export async function syncRoutePermissionsFromFeatureFlag() {
+  const payload = await posthog.getFeatureFlagPayload("rbac_route_permissions");
+
+  if (payload && typeof payload === "object") {
+    await setRoutePermissions(payload as Record<string, any>);
+    lastSyncTimestamp = Date.now();
+  } else {
+    logger.warn(
+      { payload },
+      "[RBAC - Route Permissions] Feature flag 'rbac_route_permissions' returned invalid or empty payload. Using default permissions."
+    );
+  }
+}
+
+/**
+ * Syncs route permissions from feature flag if TTL has expired.
+ * Call this in middleware to keep permissions up to date without excessive API calls.
+ */
+export async function syncRoutePermissionsWithTTL() {
+  const now = Date.now();
+
+  if (now - lastSyncTimestamp >= ROUTE_PERMISSIONS_TTL_MS) {
+    await syncRoutePermissionsFromFeatureFlag();
+  }
+}
 
 export async function setRoutePermissions(newPermissions: Record<string, any>) {
   const parsed = RoutePermissionsSchema.safeParse(newPermissions);

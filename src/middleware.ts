@@ -2,7 +2,10 @@ import { MiddlewareConfig, NextRequest, NextResponse } from "next/server";
 
 import { getSBServerClient } from "./lib/supabase/sbServer";
 import { UserRole } from "./lib/types/rbac";
-import { checkPermissionsForRoute } from "./lib/rbac/routePermissions";
+import {
+  checkPermissionsForRoute,
+  syncRoutePermissionsWithTTL
+} from "./lib/rbac/routePermissions";
 import { logger } from "./lib/logger";
 import { sanitizePathname } from "./lib/utils";
 
@@ -13,6 +16,9 @@ export async function middleware(request: NextRequest) {
   if (originalPath.startsWith("/ph")) {
     return posthogMiddleware(request);
   }
+
+  // Sync route permissions from feature flag (with TTL to avoid excessive calls)
+  await syncRoutePermissionsWithTTL();
 
   let response = NextResponse.next({
     request
