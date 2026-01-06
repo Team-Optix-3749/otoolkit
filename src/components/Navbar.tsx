@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { toast } from "sonner";
 import { useUser } from "@/hooks/useUser";
-import { useIsMounted } from "@/hooks/useIsHydrated";
+import { useIsMounted } from "@/hooks/useIsMounted";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavbar } from "@/hooks/useNavbar";
 import { logout } from "@/lib/supabase/auth";

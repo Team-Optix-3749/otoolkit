@@ -1,5 +1,5 @@
 import type { User as SupabaseUser } from "@supabase/supabase-js";
-import type { Enums, Tables } from "./supabase";
+import type { Enums, Tables } from "./supabase.gen";
 
 export type User = SupabaseUser;
 export type UserData = Tables<"UserData">;
