@@ -87,28 +87,15 @@ export default function ManageEventsContent({
   }, [selectedEvent]);
 
   const { data: sessions = [] } = useQuery<ActivitySession[]>({
-    queryKey: [...OUTREACH.EVENT_SESSIONS(selectedEvent?.id ?? 0)],
+    queryKey: OUTREACH.EVENT_SESSIONS(selectedEvent?.id ?? 0),
     queryFn: sessionsFetcher,
     enabled: Boolean(selectedEvent?.id),
-    staleTime: 30_000
-  });
-
-  const { data: eventSessions = [] } = useQuery({
-    queryKey: [
-      ...OUTREACH.EVENT_SUMMARY(selectedEvent?.id ?? 0),
-      selectedEvent?.event_name
-    ],
-    queryFn: async () => {
-      if (!selectedEvent?.id) return [];
-      const [, data] = await fetchActivitySessionsByEventId(selectedEvent.id);
-      return data;
-    },
-    enabled: Boolean(selectedEvent?.id)
+    staleTime: Infinity
   });
 
   const totals = useMemo(() => {
-    if (!eventSessions?.length) return { raw: 0, credited: 0 };
-    return eventSessions.reduce(
+    if (!sessions?.length) return { raw: 0, credited: 0 };
+    return sessions.reduce(
       (acc, row) => {
         acc.raw += row.minutes ?? 0;
         acc.credited +=
@@ -117,18 +104,18 @@ export default function ManageEventsContent({
       },
       { raw: 0, credited: 0 }
     );
-  }, [eventSessions, selectedEvent?.minutes_cap]);
+  }, [sessions, selectedEvent?.minutes_cap]);
 
   const handleEventCreated = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: OUTREACH.EVENTS });
+    queryClient.invalidateQueries({ queryKey: OUTREACH.EVENTS });
   }, [queryClient]);
 
   const invalidateCurrentEventData = useCallback(() => {
     if (!selectedEvent?.id) return;
-    void queryClient.invalidateQueries({
+    queryClient.invalidateQueries({
       queryKey: OUTREACH.EVENT_SESSIONS(selectedEvent.id)
     });
-    void queryClient.invalidateQueries({
+    queryClient.invalidateQueries({
       queryKey: OUTREACH.EVENT_SUMMARY(selectedEvent.id)
     });
   }, [queryClient, selectedEvent?.id]);
