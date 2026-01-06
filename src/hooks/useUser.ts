@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSBBrowserClient } from "@/lib/supabase/sbClient";
 
 import type { FullUserData } from "@/lib/types/db";
-import { getUserDataByUserId } from "@/lib/db/user";
+import { getUserDataWithUserId } from "@/lib/db/user";
 import { fetchUserActivitySummary } from "@/lib/db/activity";
 import { USER } from "@/lib/types/queryKeys";
 
@@ -24,7 +24,7 @@ export function useUser() {
 
       const userId = data.user.id;
       const [[userError, userData], [, activity]] = await Promise.all([
-        getUserDataByUserId(userId),
+        getUserDataWithUserId(userId),
         fetchUserActivitySummary(userId, ["build", "outreach"])
       ]);
 

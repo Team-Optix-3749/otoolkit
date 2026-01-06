@@ -110,7 +110,7 @@ export default function Navbar() {
 
   const { isSmallScreen } = useIsMobile(true);
   const navbar = useNavbar();
-  const isHydrated = useIsMounted();
+  const isMounted = useIsMounted();
   const { user } = useUser();
 
   const navItems = useMemo(
@@ -128,7 +128,7 @@ export default function Navbar() {
     router.replace(url);
   };
 
-  if (!isHydrated || navbar.disabled) return null;
+  if (!isMounted || navbar.disabled) return null;
 
   return (
     <>

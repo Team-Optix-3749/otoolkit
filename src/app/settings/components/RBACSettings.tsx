@@ -45,7 +45,7 @@ export function RBACSettings() {
     };
 
     load();
-  }, []);
+  }, [isLoading, user]);
 
   if (state.status === "loading") {
     return (

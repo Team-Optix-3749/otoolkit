@@ -101,7 +101,6 @@ export async function middleware(request: NextRequest) {
     );
 
     const next = sanitizePathname(request.nextUrl.pathname);
-    console.log(next);
 
     return mwRedirect(response, request.nextUrl.clone(), "/auth/login", {
       next

@@ -1,6 +1,6 @@
 "use server";
 
-import posthog from "posthog-js";
+import {} from "posthog-node";
 import { logger } from "../logger";
 import {
   RoutePermissionsMap,
@@ -9,6 +9,7 @@ import {
 } from "../types/rbac";
 import { isValidPathname } from "../utils";
 import { hasPermission } from "./rbac";
+import client from "../posthog";
 
 const DEFAULT_ROUTE_PERMISSIONS = {
   "/outreach": {
@@ -26,7 +27,7 @@ const ROUTE_PERMISSIONS_TTL_MS = 5 * 60 * 1000; // 5 minutes
 let lastSyncTimestamp = 0;
 
 export async function syncRoutePermissionsFromFeatureFlag() {
-  const payload = await posthog.getFeatureFlagPayload("rbac_route_permissions");
+  const payload = await client.getRemoteConfigPayload("rbac_route_permissions");
 
   if (payload && typeof payload === "object") {
     await setRoutePermissions(payload as Record<string, any>);
@@ -105,8 +106,6 @@ export async function checkPermissionsForRoute(
       "[RBAC - Route Permissions] Invalid permission rule type. Expected 'and' or 'or'."
     );
   }
-
-  console.log(permissionsMap);
 
   return ret;
 }
