@@ -10,7 +10,7 @@ const MINUTES_THRESHOLD = ["outreach", "minutesThreshold"] as const;
 const TOTAL_MINUTES = ["outreach", "minutes", "total"] as const;
 
 const ALL_USERS = ["users", "all"] as const;
-export const AUTH_USER = ["auth", "user"];
+const AUTH_USER = ["auth", "user"] as const;
 
 export const OUTREACH = {
   LEADERBOARD,

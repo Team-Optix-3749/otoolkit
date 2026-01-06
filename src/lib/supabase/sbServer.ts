@@ -31,8 +31,8 @@ export const getSBSuperuserClient = cache(() => {
     process.env.NEXT_PUBLIC_SUPABASE_URL
   );
   const serviceRoleSecret = assertEnv(
-    "SUPABSE_SERVICE_KEY",
-    process.env.SUPABSE_SERVICE_KEY
+    "SUPABASE_SERVICE_KEY",
+    process.env.SUPABASE_SERVICE_KEY
   );
 
   return createClient(url, serviceRoleSecret, {
