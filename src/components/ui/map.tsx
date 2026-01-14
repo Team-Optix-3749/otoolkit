@@ -218,16 +218,19 @@ function MapTileLayer({
   const DEFAULT_DARK_URL =
     "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png";
 
-  const { resolvedTheme } = useTheme();
-  const resolvedUrl =
-    resolvedTheme === "dark"
-      ? darkUrl ?? url ?? DEFAULT_DARK_URL
-      : url ?? DEFAULT_URL;
+  const resolvedUrl = darkUrl ?? url ?? DEFAULT_DARK_URL;
   const resolvedAttribution =
-    resolvedTheme === "dark" && darkAttribution
-      ? darkAttribution
-      : attribution ??
-        '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>';
+    (darkAttribution || attribution) ??
+    '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>';
+  // const resolvedUrl =
+  //   resolvedTheme === "dark"
+  //     ? darkUrl ?? url ?? DEFAULT_DARK_URL
+  //     : url ?? DEFAULT_URL;
+  // const resolvedAttribution =
+  //   resolvedTheme === "dark" && darkAttribution
+  //     ? darkAttribution
+  //     : attribution ??
+  //       '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
   useEffect(() => {
     if (context) {

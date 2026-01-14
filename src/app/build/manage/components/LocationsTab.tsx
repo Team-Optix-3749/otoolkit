@@ -148,6 +148,26 @@ export function LocationsTab({
   const [formData, setFormData] = useState<LocationFormData>(defaultFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  // Get user's current location on mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        () => {
+          // Silently fail - user location is optional
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    }
+  }, []);
 
   const handleOpenCreate = () => {
     setEditingLocation(null);
@@ -174,21 +194,27 @@ export function LocationsTab({
       return;
     }
 
-    console.log("Getting current location...");
+    setIsGettingLocation(true);
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setFormData({
-          ...formData,
+        setFormData((prev) => ({
+          ...prev,
           latitude: position.coords.latitude.toFixed(6),
           longitude: position.coords.longitude.toFixed(6)
+        }));
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
         });
         toast.success("Location captured");
+        setIsGettingLocation(false);
       },
       (error) => {
         toast.error(`Failed to get location: ${error.message}`);
+        setIsGettingLocation(false);
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
@@ -341,9 +367,14 @@ export function LocationsTab({
                 variant="outline"
                 size="sm"
                 onClick={handleGetCurrentLocation}
+                disabled={isGettingLocation}
                 className="w-full">
-                <MapPin className="h-4 w-4 mr-1" />
-                Use Current Location
+                {isGettingLocation ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <MapPin className="h-4 w-4 mr-1" />
+                )}
+                {isGettingLocation ? "Getting Location..." : "Use Current Location"}
               </Button>
 
               {/* Interactive Map for selecting location */}
@@ -357,19 +388,21 @@ export function LocationsTab({
                     center={
                       formData.latitude && formData.longitude
                         ? [parseFloat(formData.latitude), parseFloat(formData.longitude)]
-                        : [33.7490, -84.3880] // Default to Atlanta
+                        : userLocation
+                          ? [userLocation.lat, userLocation.lng]
+                          : [33.7490, -84.3880] // Default to Atlanta
                     }
-                    zoom={formData.latitude && formData.longitude ? 15 : 10}
+                    zoom={formData.latitude && formData.longitude ? 15 : userLocation ? 14 : 10}
                     className="h-full w-full min-h-0">
                     <MapTileLayer />
                     <MapZoomControl />
                     <MapClickHandler
                       onClick={(lat, lng) => {
-                        setFormData({
-                          ...formData,
+                        setFormData((prev) => ({
+                          ...prev,
                           latitude: lat.toFixed(6),
                           longitude: lng.toFixed(6)
-                        });
+                        }));
                         toast.success("Location selected from map");
                       }}
                     />
