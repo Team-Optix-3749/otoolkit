@@ -32,6 +32,8 @@ const BUILD_LEADERBOARD = ["build", "leaderboard"] as const;
 const BUILD_ALL_USERS_WITH_GROUPS = ["build", "users", "withGroups"] as const;
 const CAN_MANAGE_BUILD = (userId: string) =>
   ["build", "user", userId, "canManage"] as const;
+const CAN_SUBMIT_BUILD_TASKS = (userId: string) =>
+  ["build", "user", userId, "canSubmit"] as const;
 
 export const OUTREACH = {
   LEADERBOARD,
@@ -61,5 +63,6 @@ export const USER = {
   ALL_USERS,
   CAN_MANAGE_OUTREACH,
   CAN_MANAGE_BUILD,
+  CAN_SUBMIT_BUILD_TASKS,
   AUTH_USER
 };

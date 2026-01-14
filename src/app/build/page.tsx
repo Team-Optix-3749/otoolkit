@@ -26,11 +26,19 @@ export default function BuildPage() {
   const { user: userData, isLoading: isUserLoading } = useUser();
   const userId = userData?.user_id || "";
 
-  // Check if user can manage build
+  // Check if user can manage build (review tasks)
   const { data: canManageData, isLoading: isCanManageLoading } = useQuery({
     queryKey: USER.CAN_MANAGE_BUILD(userId),
     queryFn: () =>
       hasPermission(userData?.user_role || "guest", "build_tasks:manage"),
+    enabled: !isUserLoading && !!userId
+  });
+
+  // Check if user can submit tasks for review
+  const { data: canSubmitData, isLoading: isCanSubmitLoading } = useQuery({
+    queryKey: USER.CAN_SUBMIT_BUILD_TASKS(userId),
+    queryFn: () =>
+      hasPermission(userData?.user_role || "guest", "build_tasks:submit"),
     enabled: !isUserLoading && !!userId
   });
 
@@ -95,7 +103,7 @@ export default function BuildPage() {
   }, [setDefaultExpanded, resetNavbar]);
 
   const isLoading =
-    !isHydrated || isUserLoading || isCanManageLoading || isSummaryLoading;
+    !isHydrated || isUserLoading || isCanManageLoading || isCanSubmitLoading || isSummaryLoading;
 
   if (isLoading) {
     return (
@@ -106,6 +114,7 @@ export default function BuildPage() {
   }
 
   const canManage = Boolean(canManageData);
+  const canSubmit = Boolean(canSubmitData);
 
   const handleSessionChange = () => {
     refetchActiveSession();
@@ -140,6 +149,7 @@ export default function BuildPage() {
           tasks={userTasks || []}
           isLoading={isTasksLoading}
           canManage={canManage}
+          canSubmit={canSubmit}
           userId={userId}
           onTaskChange={handleTaskChange}
         />

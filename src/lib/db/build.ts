@@ -263,6 +263,52 @@ export async function fetchBuildTasks(filters?: {
   return [null, data as BuildTask[]];
 }
 
+export type BuildTaskWithUsers = BuildTask & {
+  completed_by_name: string | null;
+  reviewed_by_name: string | null;
+  created_by_name: string | null;
+};
+
+export async function fetchBuildTasksWithUsers(filters?: {
+  groupId?: number;
+  status?: BuildTask["status"];
+}): Promise<ErrorOrData<BuildTaskWithUsers[]>> {
+  const { data, error } = await makeSBRequest(async (sb) => {
+    let query = sb.from("BuildTasks").select(`
+      *,
+      completed_by_user:UserData!BuildTasks_completed_by_fkey(user_name),
+      reviewed_by_user:UserData!BuildTasks_reviewed_by_fkey(user_name),
+      created_by_user:UserData!BuildTasks_created_by_fkey(user_name)
+    `);
+
+    if (filters?.groupId) {
+      query = query.eq("assigned_group_id", filters.groupId);
+    }
+    if (filters?.status) {
+      query = query.eq("status", filters.status);
+    }
+
+    return query.order("due_date", { ascending: true, nullsFirst: false });
+  });
+
+  if (error || !data) {
+    return [error?.message ?? "Failed to load tasks", null];
+  }
+
+  // Transform the nested user data to flat fields
+  const transformedData = (data as any[]).map((task) => ({
+    ...task,
+    completed_by_name: task.completed_by_user?.user_name || null,
+    reviewed_by_name: task.reviewed_by_user?.user_name || null,
+    created_by_name: task.created_by_user?.user_name || null,
+    completed_by_user: undefined,
+    reviewed_by_user: undefined,
+    created_by_user: undefined
+  })) as BuildTaskWithUsers[];
+
+  return [null, transformedData];
+}
+
 export async function fetchUserTasks(
   userId: string
 ): Promise<ErrorOrData<BuildTask[]>> {
@@ -344,9 +390,10 @@ export async function updateBuildTask(
 }
 
 export async function submitTaskForReview(
-  taskId: number
+  taskId: number,
+  userId: string
 ): Promise<ErrorOrData<BuildTask>> {
-  return updateBuildTask(taskId, { status: "in_review" });
+  return updateBuildTask(taskId, { status: "in_review", completed_by: userId });
 }
 
 export async function reviewTask(

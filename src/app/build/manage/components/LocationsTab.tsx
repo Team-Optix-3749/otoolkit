@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
@@ -25,13 +25,60 @@ import {
   TableHeader,
   TableRow
 } from "@/components/ui/table";
-import { MapPin, Plus, Pencil, Trash2, Loader2, Clock } from "lucide-react";
+import { MapPin, Plus, Pencil, Trash2, Loader2, Clock, MousePointer2 } from "lucide-react";
 import {
   createBuildLocation,
   updateBuildLocation,
   deleteBuildLocation
 } from "@/lib/db/build";
 import type { BuildLocation } from "@/lib/types/db";
+
+// Dynamic imports for map components (must be client-side only)
+const Map = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.Map),
+  { ssr: false }
+);
+const MapTileLayer = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.MapTileLayer),
+  { ssr: false }
+);
+const MapMarker = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.MapMarker),
+  { ssr: false }
+);
+const MapCircle = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.MapCircle),
+  { ssr: false }
+);
+const MapZoomControl = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.MapZoomControl),
+  { ssr: false }
+);
+const MapPopup = dynamic(
+  () => import("@/components/ui/map").then((mod) => mod.MapPopup),
+  { ssr: false }
+);
+
+// Click handler component that needs useMapEvents from react-leaflet
+const MapClickHandler = dynamic(
+  () =>
+    import("react-leaflet").then((mod) => {
+      const { useMapEvents } = mod;
+      return function ClickHandler({
+        onClick
+      }: {
+        onClick: (lat: number, lng: number) => void;
+      }) {
+        useMapEvents({
+          click(e) {
+            onClick(e.latlng.lat, e.latlng.lng);
+          }
+        });
+        return null;
+      };
+    }),
+  { ssr: false }
+);
 
 type ValidHours = {
   enabled: boolean;
@@ -299,6 +346,61 @@ export function LocationsTab({
                 Use Current Location
               </Button>
 
+              {/* Interactive Map for selecting location */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <MousePointer2 className="h-4 w-4" />
+                  Click on map to set location
+                </Label>
+                <div className="h-48 rounded-md border overflow-hidden">
+                  <Map
+                    center={
+                      formData.latitude && formData.longitude
+                        ? [parseFloat(formData.latitude), parseFloat(formData.longitude)]
+                        : [33.7490, -84.3880] // Default to Atlanta
+                    }
+                    zoom={formData.latitude && formData.longitude ? 15 : 10}
+                    className="h-full w-full min-h-0">
+                    <MapTileLayer />
+                    <MapZoomControl />
+                    <MapClickHandler
+                      onClick={(lat, lng) => {
+                        setFormData({
+                          ...formData,
+                          latitude: lat.toFixed(6),
+                          longitude: lng.toFixed(6)
+                        });
+                        toast.success("Location selected from map");
+                      }}
+                    />
+                    {formData.latitude && formData.longitude && (
+                      <>
+                        <MapMarker
+                          position={[
+                            parseFloat(formData.latitude),
+                            parseFloat(formData.longitude)
+                          ]}
+                        />
+                        {formData.radius_meters && (
+                          <MapCircle
+                            center={[
+                              parseFloat(formData.latitude),
+                              parseFloat(formData.longitude)
+                            ]}
+                            radius={parseInt(formData.radius_meters) || 100}
+                            pathOptions={{
+                              color: "hsl(var(--primary))",
+                              fillColor: "hsl(var(--primary))",
+                              fillOpacity: 0.2
+                            }}
+                          />
+                        )}
+                      </>
+                    )}
+                  </Map>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="radius_meters">Radius (meters) *</Label>
                 <Input
@@ -416,7 +518,7 @@ export function LocationsTab({
           </DialogContent>
         </Dialog>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -427,79 +529,194 @@ export function LocationsTab({
             check-in.
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Coordinates</TableHead>
-                <TableHead>Radius</TableHead>
-                <TableHead>Valid Hours</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {locations.map((location) => (
-                <TableRow key={location.id}>
-                  <TableCell className="font-medium">
-                    {location.location_name}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {location.latitude.toFixed(4)},{" "}
-                    {location.longitude.toFixed(4)}
-                  </TableCell>
-                  <TableCell>{location.radius_meters}m</TableCell>
-                  <TableCell>
-                    {(() => {
-                      const vh = parseValidHours(location.valid_hours);
-                      if (!vh.enabled) {
-                        return (
-                          <span className="text-muted-foreground text-xs">
-                            Any time
-                          </span>
-                        );
-                      }
-                      return (
-                        <div className="flex items-center gap-1 text-xs">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span>{formatTimeDisplay(vh.start)}</span>
-                          <span className="text-muted-foreground">–</span>
-                          <span>{formatTimeDisplay(vh.end)}</span>
+          <>
+            {/* Overview Map showing all locations */}
+            <div className="h-64 rounded-md border overflow-hidden">
+              <Map
+                center={[
+                  locations.reduce((sum, loc) => sum + loc.latitude, 0) /
+                    locations.length,
+                  locations.reduce((sum, loc) => sum + loc.longitude, 0) /
+                    locations.length
+                ]}
+                zoom={12}
+                className="h-full w-full min-h-0">
+                <MapTileLayer />
+                <MapZoomControl />
+                {locations.map((location) => (
+                  <div key={location.id}>
+                    <MapMarker
+                      position={[location.latitude, location.longitude]}>
+                      <MapPopup>
+                        <div className="text-sm font-medium">
+                          {location.location_name}
                         </div>
-                      );
-                    })()}
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={location.is_active}
-                      onCheckedChange={() => handleToggleActive(location)}
-                    />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenEdit(location)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(location.id)}
-                        disabled={deletingId === location.id}>
-                        {deletingId === location.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                        <div className="text-xs text-muted-foreground">
+                          Radius: {location.radius_meters}m
+                        </div>
+                        {!location.is_active && (
+                          <div className="text-xs text-destructive">
+                            Inactive
+                          </div>
                         )}
-                      </Button>
+                      </MapPopup>
+                    </MapMarker>
+                    <MapCircle
+                      center={[location.latitude, location.longitude]}
+                      radius={location.radius_meters}
+                      pathOptions={{
+                        color: location.is_active
+                          ? "hsl(var(--primary))"
+                          : "hsl(var(--muted-foreground))",
+                        fillColor: location.is_active
+                          ? "hsl(var(--primary))"
+                          : "hsl(var(--muted-foreground))",
+                        fillOpacity: 0.15
+                      }}
+                    />
+                  </div>
+                ))}
+              </Map>
+            </div>
+
+            {/* Locations Table - Hidden on mobile, show card list instead */}
+            <div className="hidden md:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Coordinates</TableHead>
+                    <TableHead>Radius</TableHead>
+                    <TableHead>Valid Hours</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {locations.map((location) => (
+                    <TableRow key={location.id}>
+                      <TableCell className="font-medium">
+                        {location.location_name}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {location.latitude.toFixed(4)},{" "}
+                        {location.longitude.toFixed(4)}
+                      </TableCell>
+                      <TableCell>{location.radius_meters}m</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const vh = parseValidHours(location.valid_hours);
+                          if (!vh.enabled) {
+                            return (
+                              <span className="text-muted-foreground text-xs">
+                                Any time
+                              </span>
+                            );
+                          }
+                          return (
+                            <div className="flex items-center gap-1 text-xs">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span>{formatTimeDisplay(vh.start)}</span>
+                              <span className="text-muted-foreground">–</span>
+                              <span>{formatTimeDisplay(vh.end)}</span>
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell>
+                        <Switch
+                          checked={location.is_active}
+                          onCheckedChange={() => handleToggleActive(location)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-11 w-11"
+                            onClick={() => handleOpenEdit(location)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-11 w-11"
+                            onClick={() => handleDelete(location.id)}
+                            disabled={deletingId === location.id}>
+                            {deletingId === location.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            )}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile card list */}
+            <div className="md:hidden space-y-2">
+              {locations.map((location) => {
+                const vh = parseValidHours(location.valid_hours);
+                return (
+                  <Card key={location.id} className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1 flex-1 min-w-0">
+                        <div className="font-medium truncate">
+                          {location.location_name}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono">
+                          {location.latitude.toFixed(4)},{" "}
+                          {location.longitude.toFixed(4)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Radius: {location.radius_meters}m
+                        </div>
+                        {vh.enabled && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {formatTimeDisplay(vh.start)} –{" "}
+                            {formatTimeDisplay(vh.end)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <Switch
+                          checked={location.is_active}
+                          onCheckedChange={() => handleToggleActive(location)}
+                        />
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-11 w-11"
+                            onClick={() => handleOpenEdit(location)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-11 w-11"
+                            onClick={() => handleDelete(location.id)}
+                            disabled={deletingId === location.id}>
+                            {deletingId === location.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </Card>
+                );
+              })}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

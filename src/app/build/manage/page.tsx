@@ -11,7 +11,7 @@ import { BUILD, USER } from "@/lib/types/queryKeys";
 import {
   fetchBuildLocations,
   fetchBuildGroups,
-  fetchBuildTasks
+  fetchBuildTasksWithUsers
 } from "@/lib/db/build";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -71,7 +71,7 @@ export default function BuildManagePage() {
   } = useQuery({
     queryKey: BUILD.TASKS,
     queryFn: async () => {
-      const [error, data] = await fetchBuildTasks();
+      const [error, data] = await fetchBuildTasksWithUsers();
       if (error) throw new Error(error);
       return data;
     },

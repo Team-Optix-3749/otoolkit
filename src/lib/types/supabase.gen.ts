@@ -214,7 +214,6 @@ export type Database = {
           created_by: string | null
           description: string | null
           due_date: string | null
-          estimated_minutes: number | null
           id: number
           rejection_reason: string | null
           reviewed_by: string | null
@@ -230,7 +229,6 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           due_date?: string | null
-          estimated_minutes?: number | null
           id?: number
           rejection_reason?: string | null
           reviewed_by?: string | null
@@ -246,7 +244,6 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           due_date?: string | null
-          estimated_minutes?: number | null
           id?: number
           rejection_reason?: string | null
           reviewed_by?: string | null

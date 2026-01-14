@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   ListTodo,
   CheckCircle2,
@@ -23,6 +24,7 @@ type TaskListProps = {
   tasks: BuildTask[];
   isLoading: boolean;
   canManage: boolean;
+  canSubmit: boolean;
   userId: string;
   onTaskChange: () => void;
 };
@@ -66,6 +68,7 @@ export function TaskList({
   tasks,
   isLoading,
   canManage,
+  canSubmit,
   userId,
   onTaskChange
 }: TaskListProps) {
@@ -84,7 +87,7 @@ export function TaskList({
   const handleSubmitForReview = async (taskId: number) => {
     setActionLoading(taskId);
 
-    const [error] = await submitTaskForReview(taskId);
+    const [error] = await submitTaskForReview(taskId, userId);
 
     if (error) {
       toast.error(error);
@@ -122,6 +125,8 @@ export function TaskList({
     const StatusIcon = config.icon;
     const isExpanded = expandedTaskId === task.id;
     const isActionLoading = actionLoading === task.id;
+    // Task can be submitted for review if: user has submit permission AND task is in to_do or rejected status
+    const canCheckOff = canSubmit && (task.status === "to_do" || task.status === "rejected");
 
     return (
       <div
@@ -133,9 +138,24 @@ export function TaskList({
         <div
           className="flex items-start gap-3 cursor-pointer"
           onClick={() => setExpandedTaskId(isExpanded ? null : task.id)}>
-          <StatusIcon
-            className={cn("h-5 w-5 mt-0.5 flex-shrink-0", config.className)}
-          />
+          {/* Checkbox for submitting task for review - min 44px touch target */}
+          {canCheckOff && (
+            <div
+              className="flex items-center justify-center min-w-[44px] min-h-[44px] -m-2"
+              onClick={(e) => e.stopPropagation()}>
+              <Checkbox
+                checked={false}
+                disabled={isActionLoading}
+                onCheckedChange={() => handleSubmitForReview(task.id)}
+                className="h-5 w-5"
+              />
+            </div>
+          )}
+          {!canCheckOff && (
+            <StatusIcon
+              className={cn("h-5 w-5 mt-0.5 flex-shrink-0", config.className)}
+            />
+          )}
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -177,8 +197,8 @@ export function TaskList({
             )}
 
             <div className="flex flex-wrap gap-2">
-              {/* Member actions */}
-              {!canManage &&
+              {/* Submit for review action (requires build_tasks:submit permission) */}
+              {canSubmit &&
                 (task.status === "to_do" || task.status === "rejected") && (
                   <Button
                     size="sm"
@@ -197,7 +217,7 @@ export function TaskList({
                   </Button>
                 )}
 
-              {/* Admin actions */}
+              {/* Review actions (requires build_tasks:manage permission) */}
               {canManage && task.status === "in_review" && (
                 <>
                   <Button
