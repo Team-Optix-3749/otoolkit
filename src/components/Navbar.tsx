@@ -129,7 +129,7 @@ export default function Navbar() {
     if (!func()) return;
 
     if (msg) toast(msg);
-    router.replace(url);
+    router.push(url);
   };
 
   if (!isMounted || navbar.disabled) return null;
@@ -163,18 +163,31 @@ function MobileNavbar({
   setExpanded
 }: SharedProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const pendingNavigation = useRef<NavigateArgs | null>(null);
 
   useEffect(() => {
     setExpanded(true);
   }, [setExpanded]);
 
   const handleNavigation = (item: NavigateArgs) => {
+    pendingNavigation.current = item;
     setIsOpen(false);
-    onNavigate(item);
+  };
+
+  const handleDrawerClose = (open: boolean) => {
+    setIsOpen(open);
+    if (!open && pendingNavigation.current) {
+      // Small delay to let the drawer animation complete
+      const nav = pendingNavigation.current;
+      pendingNavigation.current = null;
+      setTimeout(() => {
+        onNavigate(nav);
+      }, 100);
+    }
   };
 
   return (
-    <Drawer open={isOpen} onOpenChange={setIsOpen}>
+    <Drawer open={isOpen} onOpenChange={handleDrawerClose}>
       <div className="fixed inset-x-0 top-0 z-50 border-b border-border bg-card/95 backdrop-blur-xl shadow-sm">
         <div className="flex h-16 items-center justify-between px-4">
           <ProfilePill user={user} />
