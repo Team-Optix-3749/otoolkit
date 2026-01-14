@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,12 +80,20 @@ const defaultFormData: GroupFormData = {
 };
 
 export function GroupsTab({ groups, isLoading, onRefresh }: GroupsTabProps) {
+  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<BuildGroup | null>(null);
   const [formData, setFormData] = useState<GroupFormData>(defaultFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // Invalidate user and task caches when group membership changes
+  const invalidateUserCaches = () => {
+    queryClient.invalidateQueries({ queryKey: USER.ALL_USERS });
+    queryClient.invalidateQueries({ queryKey: BUILD.ALL_USERS_WITH_GROUPS });
+    queryClient.invalidateQueries({ queryKey: ["build", "tasks"] });
+  };
 
   // User management states
   const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
@@ -198,6 +206,7 @@ export function GroupsTab({ groups, isLoading, onRefresh }: GroupsTabProps) {
       toast.error(error);
     } else {
       toast.success("Group deleted");
+      invalidateUserCaches();
       onRefresh();
       refetchUsers();
     }
@@ -238,6 +247,7 @@ export function GroupsTab({ groups, isLoading, onRefresh }: GroupsTabProps) {
       toast.error(error);
     } else {
       toast.success(`${user.user_name || "User"} added to group`);
+      invalidateUserCaches();
       refetchUsers();
     }
 
@@ -271,6 +281,7 @@ export function GroupsTab({ groups, isLoading, onRefresh }: GroupsTabProps) {
         toast.success(
           `${confirmDialog.user.user_name || "User"} removed from group`
         );
+        invalidateUserCaches();
         refetchUsers();
       }
     } else if (confirmDialog.type === "move" && confirmDialog.targetGroupId) {
@@ -290,6 +301,7 @@ export function GroupsTab({ groups, isLoading, onRefresh }: GroupsTabProps) {
             targetGroup?.group_name || "group"
           }`
         );
+        invalidateUserCaches();
         refetchUsers();
       }
     }

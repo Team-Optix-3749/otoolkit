@@ -14,7 +14,6 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-background flex flex-col">
       <NavbarServerConfig defaultExpanded={false} />
-      <ServerToaster message="Welcome to the new Optix Toolkit." type="info" />
 
       {/* Hero Section */}
       <section className="flex-1 flex flex-col items-center justify-center text-center px-4 py-20 space-y-8">

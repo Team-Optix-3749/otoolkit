@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ import {
 } from "@/lib/db/build";
 import type { BuildTaskWithUsers } from "@/lib/db/build";
 import type { BuildGroup } from "@/lib/types/db";
+import { BUILD } from "@/lib/types/queryKeys";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { DateTimePicker } from "@/components/DateTimePicker";
@@ -111,6 +113,7 @@ export function TasksTab({
   userId,
   onRefresh
 }: TasksTabProps) {
+  const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<BuildTaskWithUsers | null>(
@@ -127,6 +130,12 @@ export function TasksTab({
   );
   const [rejectionReason, setRejectionReason] = useState("");
   const [isReviewing, setIsReviewing] = useState(false);
+
+  // Invalidate all task-related caches
+  const invalidateTaskCaches = () => {
+    queryClient.invalidateQueries({ queryKey: BUILD.TASKS });
+    queryClient.invalidateQueries({ queryKey: ["build", "tasks"] });
+  };
 
   const handleOpenCreate = () => {
     setEditingTask(null);
@@ -171,6 +180,7 @@ export function TasksTab({
       } else {
         toast.success("Task updated");
         setIsDialogOpen(false);
+        invalidateTaskCaches();
         onRefresh();
       }
     } else {
@@ -180,6 +190,7 @@ export function TasksTab({
       } else {
         toast.success("Task created");
         setIsDialogOpen(false);
+        invalidateTaskCaches();
         onRefresh();
       }
     }
@@ -196,6 +207,7 @@ export function TasksTab({
       toast.error(error);
     } else {
       toast.success("Task deleted");
+      invalidateTaskCaches();
       onRefresh();
     }
 
@@ -232,6 +244,7 @@ export function TasksTab({
         decision === "complete" ? "Task approved" : "Task rejected"
       );
       setReviewDialogOpen(false);
+      invalidateTaskCaches();
       onRefresh();
     }
 

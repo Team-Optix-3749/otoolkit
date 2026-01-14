@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import {
   Loader2
 } from "lucide-react";
 import { submitTaskForReview, reviewTask } from "@/lib/db/build";
+import { BUILD } from "@/lib/types/queryKeys";
 import type { BuildTask } from "@/lib/types/db";
 import { cn } from "@/lib/utils";
 
@@ -72,8 +74,15 @@ export function TaskList({
   userId,
   onTaskChange
 }: TaskListProps) {
+  const queryClient = useQueryClient();
   const [expandedTaskId, setExpandedTaskId] = useState<number | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
+
+  // Invalidate all task-related caches
+  const invalidateTaskCaches = () => {
+    queryClient.invalidateQueries({ queryKey: BUILD.TASKS });
+    queryClient.invalidateQueries({ queryKey: ["build", "tasks"] });
+  };
 
   // Group tasks by status
   const groupedTasks = tasks.reduce((acc, task) => {
@@ -93,6 +102,7 @@ export function TaskList({
       toast.error(error);
     } else {
       toast.success("Task submitted for review");
+      invalidateTaskCaches();
       onTaskChange();
     }
 
@@ -114,6 +124,7 @@ export function TaskList({
       toast.success(
         decision === "complete" ? "Task marked as complete" : "Task rejected"
       );
+      invalidateTaskCaches();
       onTaskChange();
     }
 

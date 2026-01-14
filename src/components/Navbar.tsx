@@ -76,14 +76,12 @@ const NAV_ITEMS: NavItem[] = [
   {
     icon: <Hammer className="h-5 w-5" />,
     label: "Build",
-    url: "/build",
-    msg: "its hammertime!"
+    url: "/build"
   },
   {
     icon: <Clock className="h-5 w-5" />,
     label: "Outreach",
     url: "/outreach",
-    msg: "ew outreach :("
   }
 ];
 
