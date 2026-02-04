@@ -1,5 +1,4 @@
 import { clsx, type ClassValue } from "clsx";
-import { ResponseCookies } from "next/dist/compiled/@edge-runtime/cookies";
 import { twMerge } from "tailwind-merge";
 
 export const ShortMonths = {
@@ -36,7 +35,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPbDate(dateString: string): string {
+export function formatDate(dateString: string): string {
   if (!dateString) return "N/A";
   return new Date(dateString).toLocaleDateString("en-US", {
     dateStyle: "long"
@@ -83,12 +82,6 @@ export function getBadgeStatusStyles(
   return className;
 }
 
-type SearchParams = Record<string, string>;
-export function getSearchParamsString(params: SearchParams, basePath = "") {
-  const searchParams = new URLSearchParams(params);
-  return `${basePath}?${searchParams.toString()}`;
-}
-
 export function assertEnv(name: string, value: string | undefined) {
   if (!value) {
     throw new Error(`Missing ${name} environment variable. Got ${value}`);
@@ -97,15 +90,48 @@ export function assertEnv(name: string, value: string | undefined) {
   return value;
 }
 
-export function safeParseSearchParams(
-  url: string
-): URLSearchParams | undefined {
-  try {
-    const parsedUrl = new URL(url);
-    return parsedUrl.searchParams;
-  } catch {
-    if (url.startsWith("?")) {
-      return new URLSearchParams(url);
-    }
+type SearchParams = Record<string, string>;
+export function getSearchParamsString(params: SearchParams, basePath = "") {
+  const searchParams = new URLSearchParams(params);
+  return `${basePath}?${searchParams.toString()}`;
+}
+
+export function buildURL(
+  path: string,
+  baseURL: string = "http://example.com/",
+  params?: SearchParams
+) {
+  const url = new URL(path, baseURL);
+
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.append(key, value);
+    });
   }
+
+  return url;
+}
+
+export function isValidPathname(path?: string | null) {
+  const regex = /(\/|%2F)[a-z]+/i;
+
+  if (path) {
+    return regex.test(path);
+  }
+
+  return false;
+}
+
+export function sanitizePathname(next: string) {
+  const temp = next.replaceAll("%2F", "/");
+
+  if (!temp || temp === "/" || temp === "" || temp.startsWith("http")) {
+    return "/";
+  }
+
+  if (isValidPathname(temp)) {
+    return temp;
+  }
+
+  return "/";
 }

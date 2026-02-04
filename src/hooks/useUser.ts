@@ -1,70 +1,56 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getSBBrowserClient } from "@/lib/supabase/sbClient";
 
-import type { FullUserData, User } from "@/lib/types/db";
-import { getUserDataByUserId } from "@/lib/db/user";
+import type { FullUserData } from "@/lib/types/db";
+import { getUserDataWithUserId } from "@/lib/db/user";
+import { fetchUserActivitySummary } from "@/lib/db/activity";
+import { USER } from "@/lib/types/queryKeys";
+
+const CACHE_TIME = 1000 * 60 * 5; // 5 minutes
 
 export function useUser() {
   const supabase = getSBBrowserClient();
-  const [user, setUser] = useState<FullUserData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const combineUserData = useCallback(async (user: User) => {
-    const [error, userData] = await getUserDataByUserId(user?.id || "");
+  const { data: user, isLoading } = useQuery<FullUserData | null>({
+    queryKey: USER.AUTH_USER,
+    queryFn: async () => {
+      const { data, error } = await supabase.auth.getUser();
 
-    if (error || !userData) {
-      return;
-    }
-
-    const union = { ...user, ...userData } as FullUserData;
-
-    return union;
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    let subscription: { unsubscribe: () => void } | null = null;
-
-    (async () => {
-      const userRes = await supabase.auth.getUser();
-
-      if (!active) return;
-
-      if (userRes.error || !userRes.data.user) {
-        setUser(null);
-        setIsLoading(false);
-        return;
+      if (error || !data.user) {
+        return null;
       }
 
-      const combinedUser = await combineUserData(userRes.data.user);
+      const userId = data.user.id;
+      const [[userError, userData], [, activity]] = await Promise.all([
+        getUserDataWithUserId(userId),
+        fetchUserActivitySummary(userId, ["build", "outreach"])
+      ]);
 
-      if (!active) return;
+      if (userError || !userData) {
+        return null;
+      }
 
-      setUser(combinedUser || null);
-      setIsLoading(false);
+      return {
+        ...data.user,
+        ...userData,
+        ...activity
+      } as FullUserData;
+    },
+    staleTime: CACHE_TIME,
+    refetchOnWindowFocus: false
+  });
 
-      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (!session?.user) {
-          setUser(null);
-          setIsLoading(false);
-          return;
-        }
+  useEffect(() => {
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange(() => {
+      queryClient.invalidateQueries({ queryKey: USER.AUTH_USER });
+    });
 
-        combineUserData(session?.user).then((combinedUser) => {
-          if (!active) return;
-          setUser(combinedUser || null);
-          setIsLoading(false);
-        });
-      });
-
-      subscription = data.subscription;
-    })();
-
-    return () => {
-      active = false;
-      subscription?.unsubscribe();
-    };
-  }, [supabase, setUser, combineUserData]);
+    return () => subscription.unsubscribe();
+  }, [queryClient, supabase]);
 
   return { user, isLoading } as const;
 }

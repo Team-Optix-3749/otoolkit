@@ -11,14 +11,27 @@ type PaginatedResult<T> = {
 
 async function getUserDataRange(
   from: number,
-  to: number
+  to: number,
+  orderBy?: string,
+  orderDirection?: "asc" | "desc"
 ): Promise<{
   rows: UserData[];
   count: number | null;
 }> {
-  const { data, error, count } = await makeSBRequest(async (sb) =>
-    sb.from("UserData").select("*", { count: "exact" }).range(from, to)
-  );
+  const { data, error, count } = await makeSBRequest(async (sb) => {
+    const ret = sb
+      .from("UserData")
+      .select("*", { count: "exact" })
+      .range(from, to);
+
+    if (orderBy) {
+      return ret.order(orderBy, {
+        ascending: orderDirection === "asc"
+      });
+    }
+
+    return ret;
+  });
 
   if (error || !data) {
     return {
@@ -35,12 +48,19 @@ async function getUserDataRange(
 
 export async function fetchUserDataPaginated(
   page: number,
-  perPage: number
+  perPage: number,
+  orderBy?: string,
+  orderDirection?: "asc" | "desc"
 ): Promise<PaginatedResult<UserData> | null> {
   const from = (page - 1) * perPage;
   const to = from + perPage - 1;
 
-  const { rows, count } = await getUserDataRange(from, to);
+  const { rows, count } = await getUserDataRange(
+    from,
+    to,
+    orderBy,
+    orderDirection
+  );
 
   if (count === null) {
     return null;
@@ -56,18 +76,18 @@ export async function fetchUserDataPaginated(
 }
 
 export async function fetchUserData(id: string): Promise<UserData | null> {
-  const [error, data] = await getUserDataByUserId(id);
+  const [error, data] = await getUserDataWithUserId(id);
   if (error || !data) {
     return null;
   }
   return data;
 }
 
-export async function getUserDataByUserId(
+export async function getUserDataWithUserId(
   userId: string
 ): Promise<[string | null, UserData | null]> {
   const { data, error } = await makeSBRequest(async (sb) =>
-    sb.from("UserData").select("*").eq("user", userId).limit(1).single()
+    sb.from("UserData").select("*").eq("user_id", userId).limit(1).maybeSingle()
   );
 
   if (error || !data) {

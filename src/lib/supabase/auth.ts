@@ -2,6 +2,7 @@ import { BaseStates, LoginStates, SignupStates } from "../types/states";
 import { logger } from "../logger";
 import { getSBBrowserClient } from "./sbClient";
 import { AuthApiError } from "@supabase/supabase-js";
+import { buildURL } from "../utils";
 
 function validateEmail(value: string) {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,34 +32,49 @@ export async function loginEmailPass(
 
   const supabase = getSBBrowserClient();
 
-  const {
-    error
-  }: {
-    error: Partial<AuthApiError> | null;
-  } = await supabase.auth.signInWithPassword({
-    email: trimmedEmail,
-    password,
-  });
+  logger.debug({ email }, "[Auth] Attempting password login");
 
-  console.log({ error });
+  const { error }: { error: Partial<AuthApiError> | null } =
+    await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password
+    });
 
-  if (error?.code === "invalid_credentials")
+  if (error?.code === "invalid_credentials") {
+    logger.debug({ email }, "[Auth] Invalid credentials");
     return LoginStates.ERR_INCORRECT_PASSWORD;
+  }
 
   if (error) {
+    logger.error({ email, err: error }, "[Auth] Login failed");
     return LoginStates.ERR_UNKNOWN;
   }
+
+  logger.debug({ email }, "[Auth] Password login succeeded");
 
   return LoginStates.SUCCESS;
 }
 
-export async function loginOAuth(provider: "google" | "discord", redirectRoute?: URL): Promise<BaseStates> {
+export async function loginOAuth(
+  provider: "google" | "discord",
+  redirectRoute?: string
+): Promise<BaseStates> {
   const supabase = getSBBrowserClient();
+
+  const redirectUrl = buildURL(
+    "/api/auth/callback",
+    process.env.NEXT_PUBLIC_APP_URL ||
+      window.location.origin ||
+      "https://tk.team3749.com",
+    {
+      next: redirectRoute || "/"
+    }
+  );
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: redirectRoute?.toString()
+      redirectTo: redirectUrl.toString()
     }
   });
 
@@ -109,7 +125,9 @@ export async function signupEmailPass(
 
   const supabase = getSBBrowserClient();
 
-  const { data, error } = await supabase.auth.signUp({
+  logger.debug({ email }, "[Auth] Attempting signup");
+
+  const { error } = await supabase.auth.signUp({
     email: trimmedEmail,
     password: password1,
     options: {
@@ -130,6 +148,8 @@ export async function signupEmailPass(
     );
     return SignupStates.ERR_UNKNOWN;
   }
+
+  logger.debug({ email }, "[Auth] Signup succeeded");
 
   const loginResult = await loginEmailPass(trimmedEmail, password1);
   if (loginResult === LoginStates.SUCCESS) {

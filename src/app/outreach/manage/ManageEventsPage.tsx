@@ -3,18 +3,22 @@
 import { useEffect } from "react";
 
 import { useNavbar } from "@/hooks/useNavbar";
-import { useIsMounted } from "@/hooks/useIsHydrated";
+import { useIsMounted } from "@/hooks/useIsMounted";
 
 import Loader from "@/components/Loader";
 import ManageEventsContent from "./ManageEventsContent";
 
 export default function ManageEventsPage() {
-  const { setDefaultExpanded } = useNavbar();
+  const { setDefaultExpanded, resetNavbar } = useNavbar();
   const isHydrated = useIsMounted();
 
   useEffect(() => {
     setDefaultExpanded(false);
-  }, [setDefaultExpanded]);
+
+    return () => {
+      resetNavbar();
+    };
+  }, [setDefaultExpanded, resetNavbar]);
 
   if (!isHydrated) {
     return (
@@ -24,7 +28,5 @@ export default function ManageEventsPage() {
     );
   }
 
-  return (
-    <ManageEventsContent variant="page" />
-  );
+  return <ManageEventsContent variant="page" />;
 }

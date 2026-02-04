@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { useIsMounted } from "@/hooks/useIsHydrated";
+import { useIsMounted } from "@/hooks/useIsMounted";
 import { useNavbar } from "@/hooks/useNavbar";
 import { loginEmailPass, loginOAuth } from "@/lib/supabase/auth";
 import { BaseStates, LoginStates, stateToMessage } from "@/lib/types/states";
@@ -23,47 +23,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PasswordBlock from "../PasswordBlock";
 import SkeletonLoginForm from "./SkeletonLoginForm";
-import { safeParseSearchParams } from "@/lib/utils";
+import { sanitizePathname } from "@/lib/utils";
 
 export default function LoginForm() {
   const router = useRouter();
-  const { doMinimalRendering, setDefaultExpanded } = useNavbar();
+  const { setVariant, setDefaultExpanded, resetNavbar } = useNavbar();
   const isHydrated = useIsMounted();
+  const searchParams = useSearchParams();
 
-  const [redirectRoute, setRedirectRoute] = useState("/");
-
-  useEffect(() => {
-    const params = safeParseSearchParams(window.location.search);
-    const redirect = params?.get("redirect");
-
-    if (redirect?.startsWith("/") && !redirect.startsWith("//")) {
-      setRedirectRoute(redirect);
-    }
-  }, []);
-
-  const runRedirect = useCallback(() => {
-    toast.dismiss();
-    router.push(redirectRoute);
-  }, [router, redirectRoute]);
+  const redirectUrl = sanitizePathname(searchParams.get("next") || "/");
 
   const handleOAuth = async function (type: "discord" | "google") {
     toast.loading("Continue on the popup ...", {
-      id: "oAuthLoader"
+      id: "loginOAuthToast"
     });
 
-    const state = await loginOAuth(
-      type,
-      new URL(redirectRoute, window.location.origin)
-    );
+    const state = await loginOAuth(type, redirectUrl);
 
     switch (state) {
       case BaseStates.SUCCESS:
-        toast.success("Login successful!", { id: "oAuthLoader" });
+        toast.success("Login successful!", { id: "loginOAuthToast" });
         logger.info({ provider: type }, "OAuth login successful");
         break;
       case BaseStates.ERROR:
       default:
-        toast.error("Something went wrong :(", { id: "oAuthLoader" });
+        toast.error("Something went wrong :(", { id: "loginOAuthToast" });
         logger.error({ provider: type }, "OAuth login failed");
         break;
     }
@@ -73,45 +57,45 @@ export default function LoginForm() {
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
+      toast.loading("Logging In ...", { id: "loginEmailPassToast" });
+
       const formData = new FormData(e.currentTarget);
       const email = formData.get("email")?.toString();
       const password = formData.get("password")?.toString();
 
       if (!email || !password) {
-        toast.error("Email and password are required.");
+        toast.error("Email and password are required.", {
+          id: "loginEmailPassToast"
+        });
         return;
       }
-
-      toast.dismiss();
-      toast.loading("Logging In ...", { id: "sLoader" });
 
       const state = await loginEmailPass(email, password);
 
       switch (state) {
         case LoginStates.SUCCESS:
-          toast.success("Login successful!", { id: "sLoader" });
+          toast.success("Login successful!", { id: "loginEmailPassToast" });
           logger.info({ email }, "Password login successful");
-          runRedirect();
+          router.push(redirectUrl);
           break;
         default:
           toast.error(stateToMessage(state), {
-            id: "sLoader"
+            id: "loginEmailPassToast"
           });
           break;
       }
     },
-    [runRedirect]
+    []
   );
 
   useEffect(() => {
-    doMinimalRendering(true);
+    setVariant("minimal");
     setDefaultExpanded(false);
 
     return () => {
-      doMinimalRendering(false);
-      setDefaultExpanded(true);
+      resetNavbar();
     };
-  }, [setDefaultExpanded, doMinimalRendering]);
+  }, [setDefaultExpanded, setVariant, resetNavbar]);
 
   return (
     <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
