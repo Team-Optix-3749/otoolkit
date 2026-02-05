@@ -306,57 +306,9 @@ function DesktopNavbar({
     <div
       ref={navbarRef}
       data-navbar-root
-      className={`fixed top-2 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ease-in-out w-max ${isVisible ? "translate-y-0" : "-translate-y-full"
-        }`}>
-      <div className="bg-card/80 backdrop-blur-xl border border-border rounded-2xl shadow-2xl px-6 py-3 transition-all duration-300 ease-in-out">
-        <div className="flex items-center justify-between space-x-8 transition-all duration-300 ease-in-out">
-          <nav className="flex items-center space-x-2 transition-all duration-300 ease-in-out">
-            {navItems.map((item, index) => {
-              return (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100"
-                  key={index}
-                  onClick={onNavigate.bind(null, {
-                    url: item.url,
-                    msg: item.msg,
-                    func: item.func
-                  })}>
-                  <div className="size-4 transition-all duration-300 ease-in-out">{item.icon}</div>
-                  <span className="text-sm font-medium transition-all duration-300 ease-in-out">{item.label}</span>
-                </Button>
-              );
-            })}
-
-            {user &&
-              AUTHED_ITEMS.map((item, index) => (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-all duration-300 ease-in-out opacity-100"
-                  key={index}
-                  onClick={onNavigate.bind(null, {
-                    url: item.url,
-                    msg: item.msg,
-                    func: item.func
-                  })}>
-                  <div className="size-4 transition-all duration-300 ease-in-out">
-                    {item.icon}
-                  </div>
-                  <span className="text-sm font-medium transition-all duration-300 ease-in-out">
-                    {item.label}
-                  </span>
-                </Button>
-              ))}
-          </nav>
-        </div>
-      </div>
-
-      <div
-        className={`fixed top-2 left-1/2 z-50 w-max -translate-x-1/2 transform transition-all duration-300 ease-in-out ${
-          isVisible ? "translate-y-0" : "-translate-y-full"
-        }`}>
+      className={`fixed top-2 left-1/2 z-50 w-max -translate-x-1/2 transform transition-all duration-300 ease-in-out ${
+        isVisible ? "translate-y-0" : "-translate-y-full"
+      }`}>
         <div className="rounded-2xl border border-border bg-card/85 px-6 py-3 shadow-2xl backdrop-blur-xl">
         <div className="flex items-center justify-between space-x-8">
           <nav className="flex items-center space-x-2">
@@ -386,7 +338,6 @@ function DesktopNavbar({
             )}
           </nav>
         </div>
-      </div>
       </div>
     </div>
   );
