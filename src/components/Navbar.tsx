@@ -76,8 +76,6 @@ const NAV_ITEMS: NavItem[] = [
     label: "Scouting",
     url: "/info/kickoff-guide/scouting-data",
     msg: "Under Construction",
-    url: "/scouting",
-    msg: "Scouting is under construction",
     func: () => {
       toast.warning("Scouting is under construction");
       return false;

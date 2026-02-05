@@ -18,7 +18,13 @@ export function InfoLayoutClient({ children }: { children: React.ReactNode }) {
   // Only show desktop sidebar at md and up; never render it on mobile
   useEffect(() => {
     const mql = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT}px)`);
-    const update = () => setIsDesktop(mql.matches);
+    const update = () => {
+      const matches = mql.matches;
+      setIsDesktop(matches);
+      if (matches) {
+        setSidebarOpen(false);
+      }
+    };
     update();
     mql.addEventListener("change", update);
     return () => mql.removeEventListener("change", update);

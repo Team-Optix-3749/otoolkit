@@ -1,4 +1,4 @@
-import { MiddlewareConfig, NextRequest, NextResponse } from "next/server";
+import { MiddlewareConfig, NextFetchEvent, NextRequest, NextResponse } from "next/server";
 
 import { getSBServerClient } from "./lib/supabase/sbServer";
 import { UserRole } from "./lib/types/rbac";
@@ -9,7 +9,7 @@ import {
 import { logger } from "./lib/logger";
 import { sanitizePathname } from "./lib/utils";
 
-export async function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest, event: NextFetchEvent) {
   const originalPath = request.nextUrl.pathname;
   const segments = originalPath.split("/").filter(Boolean);
 
@@ -19,9 +19,14 @@ export async function middleware(request: NextRequest) {
 
   // Sync route permissions from feature flag (with TTL to avoid excessive calls)
   // Non-blocking: silently fail if PostHog API key is not configured
-  syncRoutePermissionsWithTTL().catch((error) => {
-    logger.warn({ error }, "[Middleware] Failed to sync route permissions from feature flag. Using default permissions.");
-  });
+  event.waitUntil(
+    syncRoutePermissionsWithTTL().catch((error) => {
+      logger.warn(
+        { error },
+        "[Middleware] Failed to sync route permissions from feature flag. Using default permissions."
+      );
+    })
+  );
 
   let response = NextResponse.next({
     request
@@ -85,7 +90,7 @@ export async function middleware(request: NextRequest) {
       "[Middleware] Failed to check route permissions (missing SUPABASE_SERVICE_KEY?). Allowing access with public permissions only."
     );
     // If permission check fails (e.g., missing service key), allow access only if no role is required
-    hasPermission = !role || role === "public";
+    hasPermission = !role || role === "guest";
   }
 
   logger.debug(
