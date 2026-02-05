@@ -172,9 +172,9 @@
     animation: gradient 8s ease infinite;
   }
 
-  /* Smooth scroll behavior */
+  /* Default: no smooth scroll so we respect prefers-reduced-motion */
   html {
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
   }
 
   /* Hide scrollbar but keep scrolling */
@@ -235,7 +235,7 @@
     scroll-snap-stop: always;
   }
 
-  /* Enhanced smooth scrolling */
+  /* Smooth scrolling only when user has not requested reduced motion */
   @media (prefers-reduced-motion: no-preference) {
     html {
       scroll-behavior: smooth;

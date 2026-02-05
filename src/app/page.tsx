@@ -17,7 +17,6 @@ import { Typewriter } from "@/components/Typewriter";
 import { DynamicBackground } from "@/components/DynamicBackground";
 import { BarChart3, ClipboardList, Users, Code2, Zap, Shield, Rocket, Target, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BarChart3, ClipboardList, Users } from "lucide-react";
 
 export const metadata = {
   title: "Optix Toolkit | Team Optix 3749",
@@ -28,16 +27,14 @@ export default function Home() {
   const sectionsRef = useRef<{ [key: string]: HTMLElement | null }>({});
 
   return (
-    <main className="min-h-screen bg-background overflow-x-hidden relative md:snap-scroll">
+    <main className="min-h-screen bg-background flex flex-col">
       <DynamicBackground />
       <SmoothScroll />
-      <NavbarServerConfig setDefaultExpanded={false} />
+      <NavbarServerConfig defaultExpanded={false} />
       <ServerToaster
         message="Welcome to the new Optix Toolkit."
         type="info"
       />
-    <main className="min-h-screen bg-background flex flex-col">
-      <NavbarServerConfig defaultExpanded={false} />
 
       {/* Chapter 01: Hero */}
       <section

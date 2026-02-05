@@ -39,6 +39,10 @@ const EventAttendanceReport = () => {
 				skipEmptyLines: true,
 				transformHeader: (header: string) => header.trim()
 			});
+			if (eventsParsed.errors && eventsParsed.errors.length > 0) {
+				const msg = eventsParsed.errors.map((e: { message?: string; row?: number }) => `row ${e.row}: ${e.message}`).join("; ");
+				throw new Error(`ActivityEvents CSV (eventsFile) parse errors: ${msg}`);
+			}
 
 			const sessionsText = await sessionsFile.text();
 			const sessionsParsed = Papa.parse(sessionsText, {
@@ -47,6 +51,10 @@ const EventAttendanceReport = () => {
 				skipEmptyLines: true,
 				transformHeader: (header: string) => header.trim()
 			});
+			if (sessionsParsed.errors && sessionsParsed.errors.length > 0) {
+				const msg = sessionsParsed.errors.map((e: { message?: string; row?: number }) => `row ${e.row}: ${e.message}`).join("; ");
+				throw new Error(`ActivitySessions CSV (sessionsFile) parse errors: ${msg}`);
+			}
 
 			let userMap: Record<string, string> = {};
 			if (usersFile) {
@@ -65,13 +73,17 @@ const EventAttendanceReport = () => {
 				});
 			}
 
+			const toTimestamp = (d: unknown): number => {
+				const t = d != null ? new Date(d as string | number | Date).getTime() : NaN;
+				return Number.isFinite(t) ? t : 0;
+			};
 			const filteredEvents = (eventsParsed.data as any[])
 				.filter(event =>
 					event.event_name &&
 					!String(event.event_name).includes('Manual Hours') &&
 					!String(event.event_name).includes("don't delete")
 				)
-				.sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
+				.sort((a, b) => toTimestamp(a.event_date) - toTimestamp(b.event_date));
 
 			const eventAttendance = filteredEvents.map(event => {
 				const attendees = (sessionsParsed.data as any[])
@@ -106,6 +118,14 @@ const EventAttendanceReport = () => {
 		}
 	};
 
+	if (loading) {
+		return (
+			<div className="flex items-center justify-center min-h-screen bg-gray-50">
+				<div className="text-lg text-gray-600">Loading event data...</div>
+			</div>
+		);
+	}
+
 	if (!filesUploaded) {
 		return (
 			<div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -132,14 +152,6 @@ const EventAttendanceReport = () => {
 						</div>
 					)}
 				</div>
-			</div>
-		);
-	}
-
-	if (loading) {
-		return (
-			<div className="flex items-center justify-center min-h-screen bg-gray-50">
-				<div className="text-lg text-gray-600">Loading event data...</div>
 			</div>
 		);
 	}

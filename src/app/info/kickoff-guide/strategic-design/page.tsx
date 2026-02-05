@@ -151,11 +151,11 @@ export default function StrategicDesignPage() {
                         </div>
                     </div>
 
-                    {/* Rule #4: Acquisition Zone */}
+                    {/* Rule #3: Acquisition Zone */}
                     <div className="mb-10">
                         <div className="flex items-start gap-4 mb-4">
                             <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white font-black text-xl">
-                                4
+                                3
                             </div>
                             <div>
                                 <h3 className="text-2xl font-bold mb-2">Maximize Your Acquisition Zone</h3>
@@ -209,11 +209,11 @@ export default function StrategicDesignPage() {
                         </div>
                     </div>
 
-                    {/* Rule #5: Fail Faster */}
+                    {/* Rule #4: Fail Faster */}
                     <div>
                         <div className="flex items-start gap-4 mb-4">
                             <div className="flex-shrink-0 w-12 h-12 rounded-full bg-gradient-to-br from-red-400 to-orange-500 flex items-center justify-center text-white font-black text-xl">
-                                5
+                                4
                             </div>
                             <div>
                                 <h3 className="text-2xl font-bold mb-2">Fail Faster!</h3>

@@ -108,6 +108,7 @@ export function HorizontalScrollSection({
     <div ref={containerRef} className={cn("relative", className)}>
       {showControls && canScrollLeft && (
         <button
+          type="button"
           onClick={() => scroll("left")}
           className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-card/80 backdrop-blur border border-border flex items-center justify-center hover:bg-card transition-all shadow-lg"
           aria-label="Scroll left"
@@ -129,6 +130,7 @@ export function HorizontalScrollSection({
 
       {showControls && canScrollRight && (
         <button
+          type="button"
           onClick={() => scroll("right")}
           className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-card/80 backdrop-blur border border-border flex items-center justify-center hover:bg-card transition-all shadow-lg"
           aria-label="Scroll right"

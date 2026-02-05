@@ -19,6 +19,9 @@ export function ParallaxBackground({ children, speed = 0.5, className = "" }: Pa
       }
     };
 
+    if (ref.current) {
+      ref.current.style.transform = `translateY(${window.scrollY * speed}px)`;
+    }
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [speed]);

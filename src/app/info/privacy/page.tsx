@@ -17,8 +17,7 @@ export default function PrivacyPolicyPage() {
 
           <section className="container mx-auto px-8 py-12 max-w-4xl">
             <div className="prose prose-lg dark:prose-invert max-w-none">
-              <p>Privacy Policy Content Goes Here:</p>
-              <p>yeah no</p>
+              <p>Privacy policy content will appear here.</p>
             </div>
           </section>
         </>

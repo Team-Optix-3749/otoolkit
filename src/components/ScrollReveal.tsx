@@ -20,10 +20,13 @@ export function ScrollReveal({
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const el = ref.current;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setTimeout(() => {
+          timeoutId = setTimeout(() => {
             setIsVisible(true);
           }, delay);
         }
@@ -31,14 +34,13 @@ export function ScrollReveal({
       { threshold: 0.1 }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current);
+    if (el) {
+      observer.observe(el);
     }
 
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
-      }
+      if (timeoutId != null) clearTimeout(timeoutId);
+      if (el) observer.unobserve(el);
     };
   }, [delay]);
 

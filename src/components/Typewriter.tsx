@@ -21,31 +21,39 @@ export function Typewriter({
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
+    setIsComplete(false);
+    setDisplayedText("");
+    let clearTyping: (() => void) | null = null;
+
+    const startTyping = (): (() => void) => {
+      let currentIndex = 0;
+      const interval = setInterval(() => {
+        if (currentIndex < text.length) {
+          setDisplayedText(text.slice(0, currentIndex + 1));
+          currentIndex++;
+        } else {
+          clearInterval(interval);
+          setIsComplete(true);
+          onComplete?.();
+        }
+      }, speed);
+      return () => clearInterval(interval);
+    };
+
     if (delay > 0) {
       const delayTimeout = setTimeout(() => {
-        startTyping();
+        clearTyping = startTyping();
       }, delay);
-      return () => clearTimeout(delayTimeout);
-    } else {
-      startTyping();
+      return () => {
+        clearTimeout(delayTimeout);
+        if (clearTyping) clearTyping();
+      };
     }
-  }, [text, speed, delay]);
-
-  const startTyping = () => {
-    let currentIndex = 0;
-    const interval = setInterval(() => {
-      if (currentIndex < text.length) {
-        setDisplayedText(text.slice(0, currentIndex + 1));
-        currentIndex++;
-      } else {
-        clearInterval(interval);
-        setIsComplete(true);
-        if (onComplete) onComplete();
-      }
-    }, speed);
-
-    return () => clearInterval(interval);
-  };
+    clearTyping = startTyping();
+    return () => {
+      if (clearTyping) clearTyping();
+    };
+  }, [text, speed, delay, onComplete]);
 
   return (
     <span className={className}>

@@ -4,6 +4,8 @@ import { useEffect } from "react";
 
 export function SmoothScroll() {
   useEffect(() => {
+    const originalScrollBehavior = document.documentElement.style.scrollBehavior;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let lastScrollTop = 0;
     let ticking = false;
 
@@ -11,12 +13,9 @@ export function SmoothScroll() {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-          
-          // Add momentum scrolling effect
-          if (Math.abs(scrollTop - lastScrollTop) > 5) {
+          if (!prefersReducedMotion && Math.abs(scrollTop - lastScrollTop) > 5) {
             document.documentElement.style.scrollBehavior = "smooth";
           }
-          
           lastScrollTop = scrollTop;
           ticking = false;
         });
@@ -25,7 +24,10 @@ export function SmoothScroll() {
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      document.documentElement.style.scrollBehavior = originalScrollBehavior;
+    };
   }, []);
 
   return null;

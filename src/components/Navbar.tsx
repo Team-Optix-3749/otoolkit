@@ -121,7 +121,6 @@ type SharedProps = {
   onNavigate: (args: NavigateArgs) => void;
 } & ReturnType<typeof useNavbar>;
 
-export default function Navbar({ }) {
 export default function Navbar() {
   const router = useRouter();
 
