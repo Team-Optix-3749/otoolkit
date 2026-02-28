@@ -66,6 +66,11 @@ const EventAttendanceReport = () => {
 					transformHeader: (header: string) => header.trim()
 				});
 
+				if (usersParsed.errors && usersParsed.errors.length > 0) {
+					const msg = usersParsed.errors.map((e: { message?: string; row?: number }) => `row ${e.row}: ${e.message}`).join("; ");
+					throw new Error(`Users CSV parse errors: ${msg}`);
+				}
+
 				(usersParsed.data as any[]).forEach(row => {
 					if (row.user_id && row.user_name) {
 						userMap[String(row.user_id)] = row.user_name;
@@ -119,13 +124,20 @@ const EventAttendanceReport = () => {
 					userName: userMap[item.userId] || `User ${item.userId}`,
 					minutes: item.minutes,
 					hours: (item.minutes / 60).toFixed(2)
-					totalAttendees: attendees.length
-				};
-			});
+				}));
 
-			setEvents(eventAttendance);
-			setFilesUploaded(true);
-			setLoading(false);
+			return {
+				id: event.id,
+				name: event.event_name,
+				date: event.event_date,
+				attendees: attendees,
+				totalAttendees: attendees.length
+			};
+		});
+
+		setEvents(eventAttendance);
+		setFilesUploaded(true);
+		setLoading(false);
 		} catch (err: any) {
 			setError(err?.message || String(err));
 			setLoading(false);

@@ -17,7 +17,7 @@ const client = posthogKey
         throw new Error("PostHog key is required in production. Set NEXT_PUBLIC_POSTHOG_KEY environment variable.");
       })()
     : ({
-        getRemoteConfigPayload: async (_key: string) => ({}),
+        getRemoteConfigPayload: async (_key: string) => undefined,
         flush: async () => {}
       } as Pick<PostHog, "getRemoteConfigPayload" | "flush">);
 

@@ -155,15 +155,15 @@ export default function StrategyGuidePage() {
                                     <h2 className="text-2xl font-bold">Resources</h2>
                                 </div>
                                 <div className="space-y-4">
-                                    <a href="https://www.chiefdelphi.com" target="_blank" rel="noopener noreferrer" className="block group p-4 rounded-lg border border-border bg-card hover:border-primary/50 hover:bg-card/80 transition-colors">
+                                    <a href="https://www.chiefdelphi.com" target="_blank" rel="noopener noreferrer" aria-label="Chief Delphi (opens in new tab)" className="block group p-4 rounded-lg border border-border bg-card hover:border-primary/50 hover:bg-card/80 transition-colors">
                                         <div className="font-semibold text-lg group-hover:text-primary transition-colors">Chief Delphi</div>
                                         <div className="text-sm text-muted-foreground">The premier online forum for FRC discussion and community help.</div>
                                     </a>
-                                    <a href="https://www.thebluealliance.com" target="_blank" rel="noopener noreferrer" className="block group p-4 rounded-lg border border-border bg-card hover:border-primary/50 hover:bg-card/80 transition-colors">
+                                    <a href="https://www.thebluealliance.com" target="_blank" rel="noopener noreferrer" aria-label="The Blue Alliance (opens in new tab)" className="block group p-4 rounded-lg border border-border bg-card hover:border-primary/50 hover:bg-card/80 transition-colors">
                                         <div className="font-semibold text-lg group-hover:text-primary transition-colors">The Blue Alliance</div>
                                         <div className="text-sm text-muted-foreground">Comprehensive match results, event data, and video archives.</div>
                                     </a>
-                                    <a href="https://www.statbotics.io" target="_blank" rel="noopener noreferrer" className="block group p-4 rounded-lg border border-border bg-card hover:border-primary/50 hover:bg-card/80 transition-colors">
+                                    <a href="https://www.statbotics.io" target="_blank" rel="noopener noreferrer" aria-label="Statbotics (opens in new tab)" className="block group p-4 rounded-lg border border-border bg-card hover:border-primary/50 hover:bg-card/80 transition-colors">
                                         <div className="font-semibold text-lg group-hover:text-primary transition-colors">Statbotics</div>
                                         <div className="text-sm text-muted-foreground">Advanced analytics and EPA predictions for teams and matches.</div>
                                     </a>
