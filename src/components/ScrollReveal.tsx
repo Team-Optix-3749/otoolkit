@@ -28,6 +28,8 @@ export function ScrollReveal({
         if (entry.isIntersecting) {
           timeoutId = setTimeout(() => {
             setIsVisible(true);
+            // Disconnect observer after revealing to prevent duplicate reveals
+            observer.disconnect();
           }, delay);
         }
       },
@@ -40,7 +42,7 @@ export function ScrollReveal({
 
     return () => {
       if (timeoutId != null) clearTimeout(timeoutId);
-      if (el) observer.unobserve(el);
+      observer.disconnect();
     };
   }, [delay]);
 

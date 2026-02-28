@@ -5,9 +5,14 @@ import { useEffect } from "react";
 export function SmoothScroll() {
   useEffect(() => {
     const originalScrollBehavior = document.documentElement.style.scrollBehavior;
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let prefersReducedMotion = mediaQuery.matches;
     let lastScrollTop = 0;
     let ticking = false;
+
+    const handlePreferenceChange = (e: MediaQueryListEvent) => {
+      prefersReducedMotion = e.matches;
+    };
 
     const handleScroll = () => {
       if (!ticking) {
@@ -24,8 +29,10 @@ export function SmoothScroll() {
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
+    mediaQuery.addEventListener("change", handlePreferenceChange);
     return () => {
       window.removeEventListener("scroll", handleScroll);
+      mediaQuery.removeEventListener("change", handlePreferenceChange);
       document.documentElement.style.scrollBehavior = originalScrollBehavior;
     };
   }, []);

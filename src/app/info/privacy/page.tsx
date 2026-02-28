@@ -104,12 +104,13 @@ export default function PrivacyPolicyPage() {
 
             <div className="overflow-x-auto rounded-lg border border-border">
               <table className="w-full text-sm">
+                <caption className="text-sm text-muted-foreground py-2 text-left">Data processing details for cookies and storage</caption>
                 <thead className="bg-muted/40 border-b border-border">
                   <tr>
-                    <th className="text-left font-semibold p-3">Type</th>
-                    <th className="text-left font-semibold p-3">Name / Provider</th>
-                    <th className="text-left font-semibold p-3">Purpose</th>
-                    <th className="text-left font-semibold p-3">Duration</th>
+                    <th scope="col" className="text-left font-semibold p-3">Type</th>
+                    <th scope="col" className="text-left font-semibold p-3">Name / Provider</th>
+                    <th scope="col" className="text-left font-semibold p-3">Purpose</th>
+                    <th scope="col" className="text-left font-semibold p-3">Duration</th>
                   </tr>
                 </thead>
                 <tbody>

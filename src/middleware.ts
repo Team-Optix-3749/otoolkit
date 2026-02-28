@@ -87,10 +87,10 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
   } catch (error) {
     logger.warn(
       { error, path: originalPath },
-      "[Middleware] Failed to check route permissions (missing SUPABASE_SERVICE_KEY?). Allowing access with public permissions only."
+      "[Middleware] Failed to check route permissions (missing SUPABASE_SERVICE_KEY?). Denying access."
     );
-    // If permission check fails (e.g., missing service key), allow access only if no role is required
-    hasPermission = !role || role === "guest";
+    // Fail closed: if permission check fails, deny access by default
+    hasPermission = false;
   }
 
   logger.debug(

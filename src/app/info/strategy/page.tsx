@@ -34,7 +34,7 @@ export default function StrategyGuidePage() {
                                 <div className="grid md:grid-cols-2 gap-6 my-6 not-prose">
                                     <Card>
                                         <CardContent className="p-6">
-                                            <h3 className="text-lg font-semibold mb-2 text-primary">Review Qualifications (Quals)</h3>
+                                            <h3 className="text-lg font-semibold mb-2 text-primary">Regular Qualifications (Quals)</h3>
                                             <p className="text-muted-foreground mb-4">Teams are randomly paired. The goal is to seed first by earning <strong>Ranking Points (RPs)</strong>.</p>
                                             <ul className="space-y-2 text-sm text-muted-foreground">
                                                 <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>Win: 2 RP</li>

@@ -70,6 +70,7 @@ export function InfoSidebar({ embedded }: InfoSidebarProps) {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      aria-current={isActive ? "page" : undefined}
                       className={cn(
                         "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                         isActive

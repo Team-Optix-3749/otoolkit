@@ -77,6 +77,10 @@ export function CodeTerminal() {
           setCurrentLineIndex(currentLineIndex + 1);
           setCurrentCharIndex(0);
           timeoutId = setTimeout(typeNextChar, 300);
+        } else {
+          // Advance to trigger completion UI
+          setCurrentLineIndex(codeLines.length);
+          setCurrentCharIndex(0);
         }
       }
     };

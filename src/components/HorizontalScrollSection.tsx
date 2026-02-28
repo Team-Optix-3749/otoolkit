@@ -28,6 +28,8 @@ export function HorizontalScrollSection({
 
     let isScrolling = false;
     let scrollTimeout: NodeJS.Timeout;
+    let rafPending = false;
+    let rafId: number | null = null;
 
     // Only tie vertical scroll to horizontal on desktop (non-touch); on phone let user swipe
     const isTouchOrNarrow = () => {
@@ -38,32 +40,39 @@ export function HorizontalScrollSection({
     const handleVerticalScroll = () => {
       if (isScrolling || isTouchOrNarrow()) return;
       
-      const containerRect = container.getBoundingClientRect();
-      const windowHeight = window.innerHeight;
-      const containerTop = containerRect.top;
-      const containerBottom = containerRect.bottom;
-      
-      // Check if container is in viewport
-      if (containerTop < windowHeight && containerBottom > 0) {
-        // Calculate scroll progress (0 to 1)
-        const scrollProgress = Math.max(0, Math.min(1, 
-          (windowHeight - containerTop) / (windowHeight + containerRect.height)
-        ));
-        
-        // Calculate horizontal scroll position
-        const maxScroll = scrollElement.scrollWidth - scrollElement.clientWidth;
-        const targetScroll = scrollProgress * maxScroll;
-        
-        isScrolling = true;
-        scrollElement.scrollTo({
-          left: targetScroll,
-          behavior: 'smooth'
+      if (!rafPending) {
+        rafPending = true;
+        rafId = window.requestAnimationFrame(() => {
+          const containerRect = container.getBoundingClientRect();
+          const windowHeight = window.innerHeight;
+          const containerTop = containerRect.top;
+          const containerBottom = containerRect.bottom;
+          
+          // Check if container is in viewport
+          if (containerTop < windowHeight && containerBottom > 0) {
+            // Calculate scroll progress (0 to 1)
+            const scrollProgress = Math.max(0, Math.min(1, 
+              (windowHeight - containerTop) / (windowHeight + containerRect.height)
+            ));
+            
+            // Calculate horizontal scroll position
+            const maxScroll = scrollElement.scrollWidth - scrollElement.clientWidth;
+            const targetScroll = scrollProgress * maxScroll;
+            
+            isScrolling = true;
+            scrollElement.scrollTo({
+              left: targetScroll,
+              behavior: 'smooth'
+            });
+            
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+              isScrolling = false;
+            }, 100);
+          }
+          rafPending = false;
+          rafId = null;
         });
-        
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-          isScrolling = false;
-        }, 100);
       }
     };
 
@@ -91,6 +100,9 @@ export function HorizontalScrollSection({
         scrollElement.removeEventListener("scroll", checkScrollability);
       }
       clearTimeout(scrollTimeout);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
     };
   }, []);
 

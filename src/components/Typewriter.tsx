@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface TypewriterProps {
   text: string;
@@ -19,6 +19,12 @@ export function Typewriter({
 }: TypewriterProps) {
   const [displayedText, setDisplayedText] = useState("");
   const [isComplete, setIsComplete] = useState(false);
+  const onCompleteRef = useRef(onComplete);
+
+  // Keep ref in sync with prop changes
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     setIsComplete(false);
@@ -34,7 +40,7 @@ export function Typewriter({
         } else {
           clearInterval(interval);
           setIsComplete(true);
-          onComplete?.();
+          onCompleteRef.current?.();
         }
       }, speed);
       return () => clearInterval(interval);
@@ -53,7 +59,7 @@ export function Typewriter({
     return () => {
       if (clearTyping) clearTyping();
     };
-  }, [text, speed, delay, onComplete]);
+  }, [text, speed, delay]);
 
   return (
     <span className={className}>

@@ -75,11 +75,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: <SearchCode className="h-5 w-5" />,
     label: "Scouting",
     url: "/info/kickoff-guide/scouting-data",
-    msg: "Under Construction",
-    func: () => {
-      toast.warning("Scouting is under construction");
-      return false;
-    }
+    msg: "Open Scouting Guide"
   },
   {
     icon: <Hammer className="h-5 w-5" />,

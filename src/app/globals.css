@@ -196,15 +196,7 @@
     display: none; /* Chrome, Safari, Opera */
   }
 
-  /* Hide scrollbar on all elements */
-  * {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-  }
 
-  *::-webkit-scrollbar {
-    display: none; /* Chrome, Safari, Opera */
-  }
 
   /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
@@ -243,7 +235,7 @@
   }
 
   /* Cinematic fade effects */
-  @keyframes fadeInUp {
+  @keyframes fade-in-up {
     from {
       opacity: 0;
       transform: translateY(30px);
@@ -255,7 +247,7 @@
   }
 
   .animate-fade-in-up {
-    animation: fadeInUp 0.8s ease-out forwards;
+    animation: fade-in-up 0.8s ease-out forwards;
   }
 
   /* Horizontal scroll snap improvements */

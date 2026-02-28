@@ -79,7 +79,7 @@ export default function Home() {
                 <Link href="/outreach">Outreach</Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="min-w-[160px] sm:min-w-[180px] text-base md:text-lg h-12 md:h-14 border-2 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300">
-                <Link href="/scouting">Scouting</Link>
+                <Link href="/info/kickoff-guide/scouting-data">Scouting</Link>
               </Button>
             </div>
           </ScrollReveal>

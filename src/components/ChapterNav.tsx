@@ -25,7 +25,7 @@ export function ChapterNav({ chapters, currentChapter, onChapterChange }: Chapte
         className="w-12 h-12 rounded-full bg-card/80 backdrop-blur border border-border flex items-center justify-center hover:bg-card transition-colors"
         aria-label="Chapter navigation"
       >
-        <span className="text-xs font-bold">{chapters.findIndex(c => c.id === currentChapter) + 1}</span>
+        <span className="text-xs font-bold">{Math.max(1, chapters.findIndex(c => c.id === currentChapter) + 1)}</span>
       </button>
       
       {isOpen && (

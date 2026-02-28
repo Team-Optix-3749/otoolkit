@@ -85,26 +85,40 @@ const EventAttendanceReport = () => {
 				)
 				.sort((a, b) => toTimestamp(a.event_date) - toTimestamp(b.event_date));
 
-			const eventAttendance = filteredEvents.map(event => {
-				const attendees = (sessionsParsed.data as any[])
-					.filter(session => String(session.event_id) === String(event.id))
-					.map(session => ({
-						userId: session.user_id,
-						userName: userMap[String(session.user_id)] || `User ${session.user_id}`,
-						minutes: session.minutes || 0,
-						hours: ((session.minutes || 0) / 60).toFixed(2)
-					}))
-					.sort((a, b) => String(a.userName).localeCompare(String(b.userName)));
+		// Build a map of sessions by event_id for O(1) lookup instead of O(E*S) filtering
+		const sessionsByEvent = new Map<string, any[]>();
+		(sessionsParsed.data as any[]).forEach(session => {
+			const eventKey = String(session.event_id);
+			if (!sessionsByEvent.has(eventKey)) {
+				sessionsByEvent.set(eventKey, []);
+			}
+			sessionsByEvent.get(eventKey)!.push(session);
+		});
 
-				return {
-					id: event.id,
-					name: event.event_name,
-					date: new Date(event.event_date).toLocaleDateString('en-US', {
-						year: 'numeric',
-						month: 'short',
-						day: 'numeric'
-					}),
-					attendees: attendees,
+		const eventAttendance = filteredEvents.map(event => {
+			// Aggregate sessions by user_id to avoid duplicate attendees
+			const eventSessions = sessionsByEvent.get(String(event.id)) || [];
+			const attendeesByUser = new Map<string, { userId: string; minutes: number }>();
+			
+			eventSessions.forEach(session => {
+				const userId = String(session.user_id);
+				const existing = attendeesByUser.get(userId);
+				if (existing) {
+					existing.minutes += session.minutes || 0;
+				} else {
+					attendeesByUser.set(userId, {
+						userId,
+						minutes: session.minutes || 0
+					});
+				}
+			});
+
+			const attendees = Array.from(attendeesByUser.values())
+				.map(item => ({
+					userId: item.userId,
+					userName: userMap[item.userId] || `User ${item.userId}`,
+					minutes: item.minutes,
+					hours: (item.minutes / 60).toFixed(2)
 					totalAttendees: attendees.length
 				};
 			});

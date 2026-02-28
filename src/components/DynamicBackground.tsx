@@ -9,6 +9,10 @@ export function DynamicBackground() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Check if user prefers reduced motion
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return; // Skip animation if reduced motion is preferred
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
