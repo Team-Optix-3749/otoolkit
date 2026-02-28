@@ -1,4 +1,4 @@
-import { BaseStates, LoginStates, SignupStates } from "../types/states";
+import { BaseStates, ForgotPasswordStates, LoginStates, SignupStates } from "../types/states";
 import { logger } from "../logger";
 import { getSBBrowserClient } from "./sbClient";
 import { AuthApiError } from "@supabase/supabase-js";
@@ -157,6 +157,43 @@ export async function signupEmailPass(
   }
 
   return SignupStates.ERR_UNKNOWN;
+}
+
+export async function resetPassword(
+  email: string
+): Promise<ForgotPasswordStates> {
+  if (!email) return ForgotPasswordStates.ERR_EMAIL_NOT_PROVIDED;
+
+  const trimmedEmail = email.trim();
+  if (!validateEmail(trimmedEmail)) {
+    return ForgotPasswordStates.ERR_INVALID_EMAIL;
+  }
+
+  const supabase = getSBBrowserClient();
+
+  logger.debug({ email: trimmedEmail }, "[Auth] Attempting password reset");
+
+  const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+    redirectTo: buildURL(
+      "/api/auth/callback",
+      process.env.NEXT_PUBLIC_APP_URL ||
+        window.location.origin ||
+        "https://tk.team3749.com",
+      { next: "/settings" }
+    ).toString()
+  });
+
+  if (error) {
+    logger.error(
+      { email: trimmedEmail, err: error.message },
+      "Supabase password reset failed"
+    );
+    return ForgotPasswordStates.ERR_UNKNOWN;
+  }
+
+  logger.debug({ email: trimmedEmail }, "[Auth] Password reset email sent");
+
+  return ForgotPasswordStates.SUCCESS;
 }
 
 export async function logout() {
