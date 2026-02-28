@@ -30,6 +30,13 @@ export enum SignupStates {
   ERR_UNKNOWN = "ERR_UNKNOWN"
 }
 
+export enum ForgotPasswordStates {
+  SUCCESS = "SUCCESS",
+  ERR_EMAIL_NOT_PROVIDED = "ERR_EMAIL_NOT_PROVIDED",
+  ERR_INVALID_EMAIL = "ERR_INVALID_EMAIL",
+  ERR_UNKNOWN = "ERR_UNKNOWN"
+}
+
 export const ErrorToString = {
   "00x01": "ENV_NOT_SET",
   "01x01": "UNKNOWN",
@@ -42,7 +49,7 @@ export const ErrorToString = {
 export type ErrorCodes = keyof typeof ErrorToString;
 
 export function stateToMessage(
-  state: BaseStates | LoginStates | SignupStates | ErrorCodes
+  state: BaseStates | LoginStates | SignupStates | ForgotPasswordStates | ErrorCodes
 ): string {
   if (state in BaseStates) {
     switch (state) {
@@ -103,6 +110,19 @@ export function stateToMessage(
         return "An account with this email already exists.";
       case SignupStates.ERR_UNKNOWN:
         return "An unknown error occurred during signup.";
+    }
+  }
+
+  if (state in ForgotPasswordStates) {
+    switch (state) {
+      case ForgotPasswordStates.SUCCESS:
+        return "Password reset email sent.";
+      case ForgotPasswordStates.ERR_EMAIL_NOT_PROVIDED:
+        return "Email not provided.";
+      case ForgotPasswordStates.ERR_INVALID_EMAIL:
+        return "Invalid email format.";
+      case ForgotPasswordStates.ERR_UNKNOWN:
+        return "An unknown error occurred. Please try again.";
     }
   }
 
