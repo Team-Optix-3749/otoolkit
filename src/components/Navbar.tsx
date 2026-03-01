@@ -17,10 +17,12 @@ import {
   Menu,
   SearchCode,
   LogOut,
+  BookOpen,
   Hammer
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import {
   Drawer,
   DrawerContent,
@@ -64,14 +66,16 @@ const NAV_ITEMS: NavItem[] = [
     url: "/"
   },
   {
+    icon: <BookOpen className="h-5 w-5" />,
+    label: "Info",
+    url: "/info",
+    msg: "Open Info"
+  },
+  {
     icon: <SearchCode className="h-5 w-5" />,
     label: "Scouting",
-    url: "/scouting",
-    msg: "Scouting is under construction",
-    func: () => {
-      toast.warning("Scouting is under construction");
-      return false;
-    }
+    url: "/info/kickoff-guide/scouting-data",
+    msg: "Open Scouting Guide"
   },
   {
     icon: <Hammer className="h-5 w-5" />,
@@ -163,27 +167,21 @@ function MobileNavbar({
   setExpanded
 }: SharedProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const pendingNavigation = useRef<NavigateArgs | null>(null);
 
   useEffect(() => {
     setExpanded(true);
   }, [setExpanded]);
 
   const handleNavigation = (item: NavigateArgs) => {
-    pendingNavigation.current = item;
     setIsOpen(false);
+    // Small delay to let the drawer animation complete
+    setTimeout(() => {
+      onNavigate(item);
+    }, 120);
   };
 
   const handleDrawerClose = (open: boolean) => {
     setIsOpen(open);
-    if (!open && pendingNavigation.current) {
-      // Small delay to let the drawer animation complete
-      const nav = pendingNavigation.current;
-      pendingNavigation.current = null;
-      setTimeout(() => {
-        onNavigate(nav);
-      }, 100);
-    }
   };
 
   return (
@@ -262,7 +260,8 @@ function DesktopNavbar({
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      const deadband = 12;
+      const deadband = 28;
+      const topRevealZone = 32;
       const currentScrollY = window.scrollY;
       const rect = navbarRef.current?.getBoundingClientRect();
       if (!rect) return;
@@ -270,10 +269,12 @@ function DesktopNavbar({
       const withinBounds =
         e.clientY > rect.top - deadband &&
         e.clientY < rect.bottom + deadband &&
-        e.clientX > rect.left &&
-        e.clientX < rect.right;
+        e.clientX > rect.left - deadband &&
+        e.clientX < rect.right + deadband;
 
-      if (withinBounds) {
+      const withinTopZone = e.clientY <= topRevealZone;
+
+      if (withinBounds || withinTopZone) {
         setIsVisible(true);
       } else if (currentScrollY >= 100 || !defaultExpanded) {
         setIsVisible(false);
@@ -304,7 +305,7 @@ function DesktopNavbar({
       className={`fixed top-2 left-1/2 z-50 w-max -translate-x-1/2 transform transition-all duration-300 ease-in-out ${
         isVisible ? "translate-y-0" : "-translate-y-full"
       }`}>
-      <div className="rounded-2xl border border-border bg-card/85 px-6 py-3 shadow-2xl backdrop-blur-xl">
+        <div className="rounded-2xl border border-border bg-card/85 px-6 py-3 shadow-2xl backdrop-blur-xl">
         <div className="flex items-center justify-between space-x-8">
           <nav className="flex items-center space-x-2">
             <NavList items={navItems} onSelect={onNavigate} inline />

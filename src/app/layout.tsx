@@ -35,7 +35,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={"dark"}>
         <QueryProvider>
-          <main className={`w-full ${geistSans.className} antialiased`}>
+          <main className={`w-full ${geistSans.className} antialiased`} suppressHydrationWarning>
             <Navbar />
             <NavbarTip />
             <Suspense fallback={<FullPageLoader />}>{children}</Suspense>
